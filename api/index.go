@@ -13,6 +13,7 @@ import (
 )
 
 const Template = `
+<link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css">
 <h1>{{.Title}}</h1>
 {{.Content}}
 `
