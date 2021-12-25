@@ -13,6 +13,8 @@ import (
 )
 
 const Template = `
+<h1>{{.Title}}</h1>
+{{.Content}}
 `
 var DefaultTemplate *template.Template
 
