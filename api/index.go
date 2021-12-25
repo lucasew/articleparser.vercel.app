@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"net/http"
 	"net/url"
-	"html/template"
+	"text/template"
 	"time"
 
 	"github.com/go-shiori/go-readability"
@@ -14,7 +14,7 @@ import (
 
 const Template = `
 <h1>{{.Title}}</h1>
-{{.Content | safeHTML}}
+{{.Content}}
 `
 var DefaultTemplate *template.Template
 
