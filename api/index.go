@@ -14,7 +14,7 @@ import (
 
 const Template = `
 <h1>{{.Title}}</h1>
-{{.Content}}
+{{.Content | safeHTML}}
 `
 var DefaultTemplate *template.Template
 
