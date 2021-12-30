@@ -13,11 +13,20 @@ import (
 )
 
 const Template = `
-<html><head><meta charset="utf-8"/></head></html>
-<link id="theme" rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css">
+<html>
+    <head>
+	<meta charset="utf-8"/>
+	<link id="theme" rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css">
+    </head>
+    <body>
+	<script src="https://bookmarklet-theme.vercel.app/script.js"></script>
+    </body>
+</html>
+
 <h1>{{.Title}}</h1>
 {{.Content}}
 `
+
 var DefaultTemplate *template.Template
 
 func init() {
