@@ -29,42 +29,63 @@ const Template = `
 `
 
 var DefaultTemplate *template.Template
+var ReadabilityParser readability.Parser
 
 func init() {
-    DefaultTemplate = template.Must(template.New("article").Parse(Template))
+	DefaultTemplate = template.Must(template.New("article").Parse(Template))
+
+	ReadabilityParser = readability.NewParser()
+	ReadabilityParser.Debug = true
+}
+
+func NewParser(ctx context.Context, link *url.URL) (*Parser, error) {
+	buf := bytes.NewBuffer([]byte{})
+	req, err := http.NewRequestWithContext(ctx, "GET", link.String(), buf)
+	if err != nil {
+		return nil, err
+	}
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	node, err := html.Parse(res.Body)
+	ret := &Parser{
+		link: link,
+		page: node,
+	}
+	return ret, nil
+}
+
+type Parser struct {
+	link *url.URL
+	page *html.Node
+}
+
+func (p *Parser) ParseArticle() (readability.Article, error) {
+	return ReadabilityParser.ParseDocument(p.page, p.link)
 }
 
 func Handler(w http.ResponseWriter, r *http.Request) {
-    link, err := url.Parse(r.URL.Query().Get("url"))
-    if err != nil {
-        w.WriteHeader(400)
-        return
-    }
-    ctx, cancel := context.WithTimeout(r.Context(), time.Second*5)
-    defer cancel()
-    buf := bytes.NewBuffer([]byte{})
-    req, err := http.NewRequestWithContext(ctx, "GET", link.String(), buf)
-    if err != nil {
-        w.WriteHeader(400)
-        return
-    }
-    res, err := http.DefaultClient.Do(req)
-    if err != nil {
-        w.WriteHeader(res.StatusCode)
-        return
-    }
-    node, err := html.Parse(res.Body)
-    if err != nil {
-        w.WriteHeader(500)
-    }
-    parser := readability.NewParser()
-    parser.Debug = true
-    article, err := parser.ParseDocument(node, link)
-    if err != nil {
-        w.WriteHeader(422) // Unprocessable entity
-    }
-    err = DefaultTemplate.Execute(w, article)
-    if err != nil {
-        w.WriteHeader(500)
-    }
+	link, err := url.Parse(r.URL.Query().Get("url"))
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), time.Second*5)
+	defer cancel()
+
+	parser, err := NewParser(ctx, link)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	article, err := parser.ParseArticle()
+	if err != nil {
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		return
+	}
+	err = DefaultTemplate.Execute(w, article)
+	if err != nil {
+		w.WriteHeader(500)
+	}
 }
