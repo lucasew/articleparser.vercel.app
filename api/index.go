@@ -2,10 +2,14 @@ package handler
 
 import (
 	"bytes"
+	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"text/template"
 	"time"
+
+	"log"
 
 	"github.com/go-shiori/go-readability"
 	"golang.org/x/net/context"
@@ -65,8 +69,23 @@ func (p *Parser) ParseArticle() (readability.Article, error) {
 	return ReadabilityParser.ParseDocument(p.page, p.link)
 }
 
+// FixURL vercel for some reason strip out one of the slashes of https:// when normalizing the url
+func FixURL(link string) string {
+	slashIndex := strings.Index(link, "/")
+	if link[slashIndex+1] != '/' {
+		return strings.Replace(link, "/", "//", 1)
+	}
+	return link
+}
+
 func Handler(w http.ResponseWriter, r *http.Request) {
-	link, err := url.Parse(r.URL.Query().Get("url"))
+	rawLink := FixURL(r.URL.Query().Get("url"))
+	format := r.URL.Query().Get("format")
+	if format == "" {
+		format = "html"
+	}
+	log.Printf("request: %s %s", format, rawLink)
+	link, err := url.Parse(rawLink)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -84,8 +103,17 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		return
 	}
-	err = DefaultTemplate.Execute(w, article)
-	if err != nil {
-		w.WriteHeader(500)
+	switch format {
+	case "html":
+		err = DefaultTemplate.Execute(w, article)
+		if err != nil {
+			w.WriteHeader(500)
+		}
+		break
+	case "md", "markdown":
+		fmt.Fprintf(w, "* markdown *")
+		break
+	default:
+		w.WriteHeader(http.StatusBadRequest)
 	}
 }
