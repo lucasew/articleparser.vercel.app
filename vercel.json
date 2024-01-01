@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    {"source": "/api/html/(?<url>.*)", "destination": "/api?url=$url"},
+    {"source": "/api/md/(?<url>.*)", "destination": "/api?markwown=1&url=$url"}
+  ]
+}
