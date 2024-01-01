@@ -2,7 +2,7 @@ package handler
 
 import (
 	"bytes"
-	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -12,6 +12,7 @@ import (
 	"log"
 
 	"github.com/go-shiori/go-readability"
+	"github.com/mattn/godown"
 	"golang.org/x/net/context"
 	"golang.org/x/net/html"
 )
@@ -103,15 +104,18 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		return
 	}
+
+	buf := bytes.NewBuffer([]byte{})
+	err = DefaultTemplate.Execute(buf, article)
 	switch format {
 	case "html":
-		err = DefaultTemplate.Execute(w, article)
+		_, err := io.Copy(w, buf)
 		if err != nil {
 			w.WriteHeader(500)
 		}
 		break
 	case "md", "markdown":
-		fmt.Fprintf(w, "* markdown *")
+		godown.Convert(w, buf, nil)
 		break
 	default:
 		w.WriteHeader(http.StatusBadRequest)
