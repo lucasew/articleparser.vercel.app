@@ -1,6 +1,6 @@
 module github.com/lucasew/readability-web
 
-go 1.16
+go 1.22.3
 
 require (
 	github.com/go-shiori/dom v0.0.0-20230515143342-73569d674e1c // indirect
