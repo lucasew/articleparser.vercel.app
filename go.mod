@@ -5,7 +5,7 @@ go 1.22.3
 require (
 	github.com/go-shiori/go-readability v0.0.0-20241012063810-92284fa8a71f
 	github.com/mattn/godown v0.0.1
-	golang.org/x/net v0.33.0
+	golang.org/x/net v0.34.0
 )
 
 require (
