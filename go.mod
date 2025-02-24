@@ -5,7 +5,7 @@ go 1.23
 toolchain go1.23.6
 
 require (
-	github.com/go-shiori/go-readability v0.0.0-20250215073538-7ece303db41c
+	github.com/go-shiori/go-readability v0.0.0-20250217085726-9f5bf5ca7612
 	github.com/mattn/godown v0.0.1
 	golang.org/x/net v0.35.0
 )
