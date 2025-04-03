@@ -71,8 +71,7 @@ func normalizeAndValidateURL(rawLink string) (*url.URL, error) {
 	return link, nil
 }
 
-// AIMPROV: Rename the handler function to better reflect its purpose and improve readability.
-func fetchAndFormatArticle(w http.ResponseWriter, r *http.Request) {
+func Handler(w http.ResponseWriter, r *http.Request) {
 	rawLink := r.URL.Query().Get("url")
 	format := r.URL.Query().Get("format")
 	if format == "" {
