@@ -1,20 +1,64 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8"/>
-    <link id="theme" rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css">
-  </head>
-  <body>
-    <script src="https://bookmarklet-theme.vercel.app/script.js"></script>
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Article Parser</title>
+        <link
+            id="theme"
+            rel="stylesheet"
+            href="https://unpkg.com/sakura.css/css/sakura.css"
+        />
+        <style>
+            body {
+                max-width: 800px;
+                margin: 0 auto;
+                padding: 1rem;
+                line-height: 1.6;
+            }
+            form {
+                margin: 2rem 0;
+            }
+            input[type="text"] {
+                width: 70%;
+                padding: 0.5rem;
+            }
+            button {
+                padding: 0.5rem 1rem;
+                cursor: pointer;
+            }
+        </style>
+    </head>
+    <body>
+        <script src="https://bookmarklet-theme.vercel.app/script.js"></script>
 
-<h1>Article parser</h1>
-<p>Made by <a href="https://github.com/lucasew/">lucasew</a> using <a href="https://github.com/go-shiori/go-readability">go-readability</a> and <a href="https://oxal.org/projects/sakura/">sakura.css</a>.
-<form action="/api">
-    <label for="url">URL:</label>
-    <input type="text" name="url" id="url" value="">
-    <button type="submit">Declutter</button>
-</form>
-<p>Or use the <a href="javascript: (function(){window.open('https://articleparser.vercel.app/api?url=' + encodeURI(window.location.href), '_blank')})();">bookmarklet</a>.
+        <h1>Article Parser</h1>
+        <p>
+            Made by <a href="https://github.com/lucasew/">lucasew</a> using
+            <a href="https://github.com/go-shiori/go-readability"
+                >go-readability</a
+            >
+            and <a href="https://oxal.org/projects/sakura/">sakura.css</a>.
+        </p>
 
-  </body>
+        <form action="/api">
+            <label for="url">URL:</label>
+            <input
+                type="text"
+                name="url"
+                id="url"
+                value=""
+                placeholder="https://example.com/article"
+            />
+            <button type="submit">Declutter</button>
+        </form>
+
+        <p>
+            Or use the
+            <a
+                href="javascript: (function(){window.open('https://articleparser.vercel.app/api?url=' + encodeURI(window.location.href), '_blank')})();"
+                >bookmarklet</a
+            >.
+        </p>
+    </body>
 </html>

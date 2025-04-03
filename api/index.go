@@ -3,13 +3,12 @@ package handler
 import (
 	"bytes"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
 	"text/template"
 	"time"
-
-	"log"
 
 	"github.com/go-shiori/go-readability"
 	"github.com/mattn/godown"
@@ -20,60 +19,51 @@ import (
 const Template = `
 <!DOCTYPE html>
 <html>
-    <head>
+<head>
 	<meta charset="utf-8"/>
 	<link id="theme" rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css">
-    </head>
-    <body>
+</head>
+<body>
 	<script src="https://bookmarklet-theme.vercel.app/script.js"></script>
-    </body>
+	<h1>{{.Title}}</h1>
+	{{.Content}}
+</body>
 </html>
-
-<h1>{{.Title}}</h1>
-{{.Content}}
 `
 
-var DefaultTemplate *template.Template
-var ReadabilityParser readability.Parser
+var (
+	DefaultTemplate  = template.Must(template.New("article").Parse(Template))
+	ReadabilityParser = readability.NewParser()
+)
 
 func init() {
-	DefaultTemplate = template.Must(template.New("article").Parse(Template))
-
-	ReadabilityParser = readability.NewParser()
 	ReadabilityParser.Debug = true
 }
 
-func NewParser(ctx context.Context, link *url.URL) (*Parser, error) {
-	buf := bytes.NewBuffer([]byte{})
-	req, err := http.NewRequestWithContext(ctx, "GET", link.String(), buf)
+func fetchAndParse(ctx context.Context, link *url.URL) (readability.Article, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", link.String(), nil)
 	if err != nil {
-		return nil, err
+		return readability.Article{}, err
 	}
+
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, err
+		return readability.Article{}, err
 	}
+	defer res.Body.Close()
+
 	node, err := html.Parse(res.Body)
-	ret := &Parser{
-		link: link,
-		page: node,
+	if err != nil {
+		return readability.Article{}, err
 	}
-	return ret, nil
-}
 
-type Parser struct {
-	link *url.URL
-	page *html.Node
-}
-
-func (p *Parser) ParseArticle() (readability.Article, error) {
-	return ReadabilityParser.ParseDocument(p.page, p.link)
+	return ReadabilityParser.ParseDocument(node, link)
 }
 
 // FixURL vercel for some reason strip out one of the slashes of https:// when normalizing the url
 func FixURL(link string) string {
 	slashIndex := strings.Index(link, "/")
-	if link[slashIndex+1] != '/' {
+	if slashIndex >= 0 && slashIndex+1 < len(link) && link[slashIndex+1] != '/' {
 		return strings.Replace(link, "/", "//", 1)
 	}
 	return link
@@ -86,37 +76,35 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		format = "html"
 	}
 	log.Printf("request: %s %s", format, rawLink)
+
 	link, err := url.Parse(rawLink)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	ctx, cancel := context.WithTimeout(r.Context(), time.Second*5)
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
-	parser, err := NewParser(ctx, link)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	article, err := parser.ParseArticle()
+	article, err := fetchAndParse(ctx, link)
 	if err != nil {
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		return
 	}
 
-	buf := bytes.NewBuffer([]byte{})
-	err = DefaultTemplate.Execute(buf, article)
+	buf := bytes.Buffer{}
+	if err = DefaultTemplate.Execute(&buf, article); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	switch format {
 	case "html":
-		_, err := io.Copy(w, buf)
-		if err != nil {
-			w.WriteHeader(500)
+		if _, err := io.Copy(w, &buf); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
 		}
-		break
 	case "md", "markdown":
-		godown.Convert(w, buf, nil)
-		break
+		godown.Convert(w, &buf, nil)
 	default:
 		w.WriteHeader(http.StatusBadRequest)
 	}
