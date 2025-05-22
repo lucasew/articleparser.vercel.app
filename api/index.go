@@ -1,23 +1,23 @@
 package handler
 
 import (
-   "bytes"
-   "encoding/json"
-   "errors"
-   "fmt"
-   "io"
-   "log"
-   "net"
-   "net/http"
-   "net/url"
-   "strings"
-   "text/template"
-   "time"
+	"bytes"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"html/template"
+	"io"
+	"log"
+	"net"
+	"net/http"
+	"net/url"
+	"strings"
+	"time"
 
-   "github.com/go-shiori/go-readability"
-   "github.com/mattn/godown"
-   "golang.org/x/net/context"
-   "golang.org/x/net/html"
+	"github.com/go-shiori/go-readability"
+	"github.com/mattn/godown"
+	"golang.org/x/net/context"
+	"golang.org/x/net/html"
 )
 
 const Template = `
@@ -87,9 +87,9 @@ func normalizeAndValidateURL(rawLink string) (*url.URL, error) {
 	}
 	// add scheme if missing
 	if !strings.Contains(rawLink, "://") {
-       // default to https if no scheme provided
-       rawLink = fmt.Sprintf("https://%s", rawLink)
-   }
+		// default to https if no scheme provided
+		rawLink = fmt.Sprintf("https://%s", rawLink)
+	}
 	link, err := url.Parse(rawLink)
 	if err != nil {
 		return nil, fmt.Errorf("invalid URL: %w", err)
