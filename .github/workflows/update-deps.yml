@@ -19,7 +19,7 @@ jobs:
         uses: actions/setup-go@v5
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Update minor and patch-level dependencies
         run: go get -t -u ./...
