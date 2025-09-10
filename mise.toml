@@ -1,0 +1,6 @@
+[tools]
+bun = "1.2.21"
+go = "1.25.1"
+
+[tasks.dev]
+run = "bunx vercel dev"
