@@ -1,5 +1,5 @@
 [tools]
-bun = "1.3.0"
+bun = "1.3.1"
 go = "1.25.3"
 
 [tasks.dev]
