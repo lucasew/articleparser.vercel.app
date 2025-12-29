@@ -103,7 +103,7 @@ func normalizeAndValidateURL(rawLink string) (*url.URL, error) {
 	ips, err := net.LookupIP(host)
 	if err == nil {
 		for _, ip := range ips {
-			if isPrivateIP(ip) {
+			if ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
 				return nil, errors.New("refusing private network address")
 			}
 		}
@@ -171,26 +171,4 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(map[string]string{"error": msg})
-}
-
-// isPrivateIP reports whether ip is in a private or loopback range
-func isPrivateIP(ip net.IP) bool {
-	if ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
-		return true
-	}
-	if ip4 := ip.To4(); ip4 != nil {
-		switch ip4[0] {
-		case 10:
-			return true
-		case 172:
-			if ip4[1]&0xf0 == 16 {
-				return true
-			}
-		case 192:
-			if ip4[1] == 168 {
-				return true
-			}
-		}
-	}
-	return false
 }
