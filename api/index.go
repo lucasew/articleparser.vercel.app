@@ -53,10 +53,6 @@ var (
 	maxContentBytes = int64(2 * 1024 * 1024)
 )
 
-func init() {
-	ReadabilityParser.Debug = true
-}
-
 // AIMPROV: Extract fetching and parsing logic into a separate function to improve readability and testability.
 func fetchAndParse(ctx context.Context, link *url.URL) (readability.Article, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", link.String(), nil)
