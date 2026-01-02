@@ -59,6 +59,7 @@ func fetchAndParse(ctx context.Context, link *url.URL) (readability.Article, err
 	if err != nil {
 		return readability.Article{}, err
 	}
+	req.Header.Set("User-Agent", "Sentinel/1.0")
 
 	res, err := httpClient.Do(req)
 	if err != nil {
