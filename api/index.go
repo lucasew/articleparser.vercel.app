@@ -133,7 +133,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	link, err := normalizeAndValidateURL(rawLink)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		log.Printf("error normalizing URL %q: %v", rawLink, err)
+		writeError(w, http.StatusBadRequest, "Invalid URL provided")
 		return
 	}
 
@@ -142,7 +143,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	article, err := fetchAndParse(ctx, link)
 	if err != nil {
-		writeError(w, http.StatusUnprocessableEntity, err.Error())
+		log.Printf("error fetching or parsing URL %q: %v", rawLink, err)
+		writeError(w, http.StatusUnprocessableEntity, "Failed to process URL")
 		return
 	}
 
