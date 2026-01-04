@@ -122,13 +122,19 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	securityHeadersMiddleware(http.HandlerFunc(handler)).ServeHTTP(w, r)
 }
 
+// getFormat extracts the 'format' query param, defaulting to "html"
+func getFormat(r *http.Request) string {
+	format := r.URL.Query().Get("format")
+	if format == "" {
+		return "html"
+	}
+	return format
+}
+
 // handler is the actual logic
 func handler(w http.ResponseWriter, r *http.Request) {
 	rawLink := r.URL.Query().Get("url")
-	format := r.URL.Query().Get("format")
-	if format == "" {
-		format = "html"
-	}
+	format := getFormat(r)
 	log.Printf("request: %s %s", format, rawLink)
 
 	link, err := normalizeAndValidateURL(rawLink)
