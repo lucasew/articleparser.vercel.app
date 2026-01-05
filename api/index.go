@@ -134,6 +134,10 @@ func getFormat(r *http.Request) string {
 // handler is the actual logic
 func handler(w http.ResponseWriter, r *http.Request) {
 	rawLink := r.URL.Query().Get("url")
+	if len(rawLink) > 2048 {
+		writeError(w, http.StatusBadRequest, "URL is too long")
+		return
+	}
 	format := getFormat(r)
 	log.Printf("request: %s %s", format, rawLink)
 
