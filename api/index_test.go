@@ -63,10 +63,17 @@ func TestFetchAndParse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("fetchAndParse returned error: %v", err)
 	}
-	if art.Title != "Test Title" {
-		t.Errorf("Article.Title = %q; want %q", art.Title, "Test Title")
+	if art.Title() != "Test Title" {
+		t.Errorf("Article.Title() = %q; want %q", art.Title(), "Test Title")
 	}
-	if !strings.Contains(art.Content, "<p>Hello World") {
-		t.Errorf("Article.Content missing expected paragraph, got: %q", art.Content)
+
+	var content strings.Builder
+	err = art.RenderHTML(&content)
+	if err != nil {
+		t.Fatalf("failed to render article content: %v", err)
+	}
+
+	if !strings.Contains(content.String(), "<p>Hello World") {
+		t.Errorf("Article.Content missing expected paragraph, got: %q", content.String())
 	}
 }
