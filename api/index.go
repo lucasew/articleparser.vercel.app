@@ -41,13 +41,8 @@ var (
 	ReadabilityParser = readability.NewParser()
 	// httpClient used for fetching remote articles with timeouts and redirect policy
 	httpClient = &http.Client{
-		Timeout: 10 * time.Second,
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			if len(via) >= 5 {
-				return errors.New("stopped after 5 redirects")
-			}
-			return nil
-		},
+		Timeout:       10 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error { return http.ErrUseLastResponse },
 	}
 	// limit download size to avoid OOM (2 MiB)
 	maxContentBytes = int64(2 * 1024 * 1024)
@@ -55,16 +50,39 @@ var (
 
 // AIMPROV: Extract fetching and parsing logic into a separate function to improve readability and testability.
 func fetchAndParse(ctx context.Context, link *url.URL) (readability.Article, error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", link.String(), nil)
-	if err != nil {
-		return readability.Article{}, err
-	}
+	var res *http.Response
+	var err error
+	// Manually handle redirects to prevent SSRF
+	for i := 0; i < 5; i++ {
+		req, err := http.NewRequestWithContext(ctx, "GET", link.String(), nil)
+		if err != nil {
+			return readability.Article{}, err
+		}
 
-	res, err := httpClient.Do(req)
-	if err != nil {
-		return readability.Article{}, err
+		res, err = httpClient.Do(req)
+		if err != nil {
+			return readability.Article{}, err
+		}
+
+		if res.StatusCode >= 300 && res.StatusCode <= 399 {
+			redirectURL, err := res.Location()
+			if err != nil {
+				return readability.Article{}, fmt.Errorf("failed to get redirect location: %w", err)
+			}
+			link, err = normalizeAndValidateURL(redirectURL.String())
+			if err != nil {
+				return readability.Article{}, fmt.Errorf("redirect to invalid URL blocked: %w", err)
+			}
+			continue // follow the redirect
+		}
+		// not a redirect, break the loop
+		break
 	}
 	defer res.Body.Close()
+
+	if res.StatusCode < 200 || res.StatusCode >= 300 {
+		return readability.Article{}, fmt.Errorf("unexpected status code: %d", res.StatusCode)
+	}
 
 	// limit body size to prevent OOM
 	reader := io.LimitReader(res.Body, maxContentBytes)

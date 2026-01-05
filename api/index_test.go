@@ -70,3 +70,47 @@ func TestFetchAndParse(t *testing.T) {
 		t.Errorf("Article.Content missing expected paragraph, got: %q", art.Content)
 	}
 }
+
+func TestFetchAndParse_SSRFRedirect(t *testing.T) {
+	// privateTarget is the handler that should NOT be reached.
+	privateTarget := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Error("Request was made to the private target, SSRF exploit is possible")
+		w.WriteHeader(http.StatusOK)
+	})
+	privateServer := httptest.NewServer(privateTarget)
+	defer privateServer.Close()
+
+	// redirecter serves a redirect to the private server.
+	redirecter := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, privateServer.URL, http.StatusFound)
+	})
+	publicServer := httptest.NewServer(redirecter)
+	defer publicServer.Close()
+
+	// Override httpClient to use the test server's client.
+	oldClient := httpClient
+	httpClient = publicServer.Client()
+	// Disable redirects in the test client to mimick the real client's behavior
+	httpClient.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
+	defer func() { httpClient = oldClient }()
+
+	u, err := url.Parse(publicServer.URL)
+	if err != nil {
+		t.Fatalf("failed to parse public server URL: %v", err)
+	}
+
+	ctx := context.Background()
+	_, err = fetchAndParse(ctx, u)
+
+	if err == nil {
+		t.Fatal("fetchAndParse did not return an error for a redirect to a private IP")
+	}
+
+	// Check if the error message indicates that the redirect was blocked.
+	expectedErrorSubstring := "refusing private network address"
+	if !strings.Contains(err.Error(), expectedErrorSubstring) {
+		t.Errorf("fetchAndParse error message = %q; want substring %q", err.Error(), expectedErrorSubstring)
+	}
+}
