@@ -1,11 +1,9 @@
 package handler
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"html/template"
 	"io"
 	"log"
 	"net"
@@ -15,29 +13,11 @@ import (
 	"time"
 
 	"github.com/go-shiori/go-readability"
-	"github.com/mattn/godown"
 	"golang.org/x/net/context"
 	"golang.org/x/net/html"
 )
 
-const Template = `
-<!DOCTYPE html>
-<html>
-<head>
-	<meta charset="utf-8"/>
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<link id="theme" rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css">
-</head>
-<body>
-	<script src="https://bookmarklet-theme.vercel.app/script.js"></script>
-	<h1>{{.Title}}</h1>
-	{{.Content}}
-</body>
-</html>
-`
-
 var (
-	DefaultTemplate   = template.Must(template.New("article").Parse(Template))
 	ReadabilityParser = readability.NewParser()
 	// httpClient used for fetching remote articles with timeouts and redirect policy
 	httpClient = &http.Client{
@@ -154,36 +134,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	buf := &bytes.Buffer{}
-	// inject safe HTML content
-	data := struct {
-		Title   string
-		Content template.HTML
-	}{
-		Title:   article.Title,
-		Content: template.HTML(article.Content),
-	}
-	if err = DefaultTemplate.Execute(buf, data); err != nil {
-		writeError(w, http.StatusInternalServerError, "template render failed")
-		return
-	}
-
-	switch format {
-	case "html":
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		io.Copy(w, buf)
-	case "md", "markdown":
-		w.Header().Set("Content-Type", "text/markdown")
-		godown.Convert(w, buf, nil)
-	case "json":
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{
-			"title":   article.Title,
-			"content": article.Content,
-		})
-	default:
-		writeError(w, http.StatusBadRequest, "invalid format")
-	}
+	renderArticle(w, r, article)
 }
 
 // writeError writes a JSON error message with given status
