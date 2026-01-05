@@ -20,6 +20,20 @@ import (
 	"golang.org/x/net/html"
 )
 
+const (
+	// networking
+	requestTimeout = 10 * time.Second
+	handlerTimeout = 5 * time.Second
+	maxRedirects   = 5
+	// content processing
+	maxContentBytes = int64(2 * 1024 * 1024) // 2 MiB
+	// formats
+	formatHTML     = "html"
+	formatMarkdown = "markdown"
+	formatMD       = "md"
+	formatJSON     = "json"
+)
+
 const Template = `
 <!DOCTYPE html>
 <html>
@@ -41,16 +55,14 @@ var (
 	ReadabilityParser = readability.NewParser()
 	// httpClient used for fetching remote articles with timeouts and redirect policy
 	httpClient = &http.Client{
-		Timeout: 10 * time.Second,
+		Timeout: requestTimeout,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			if len(via) >= 5 {
-				return errors.New("stopped after 5 redirects")
+			if len(via) >= maxRedirects {
+				return fmt.Errorf("stopped after %d redirects", maxRedirects)
 			}
 			return nil
 		},
 	}
-	// limit download size to avoid OOM (2 MiB)
-	maxContentBytes = int64(2 * 1024 * 1024)
 )
 
 // AIMPROV: Extract fetching and parsing logic into a separate function to improve readability and testability.
@@ -126,7 +138,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 func getFormat(r *http.Request) string {
 	format := r.URL.Query().Get("format")
 	if format == "" {
-		return "html"
+		return formatHTML
 	}
 	return format
 }
@@ -144,7 +156,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), handlerTimeout)
 	defer cancel()
 
 	article, err := fetchAndParse(ctx, link)
@@ -169,13 +181,13 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch format {
-	case "html":
+	case formatHTML:
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		io.Copy(w, buf)
-	case "md", "markdown":
+	case formatMD, formatMarkdown:
 		w.Header().Set("Content-Type", "text/markdown")
 		godown.Convert(w, buf, nil)
-	case "json":
+	case formatJSON:
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{
 			"title":   article.Title,
