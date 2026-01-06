@@ -53,7 +53,6 @@ var (
 	maxContentBytes = int64(2 * 1024 * 1024)
 )
 
-// AIMPROV: Extract fetching and parsing logic into a separate function to improve readability and testability.
 func fetchAndParse(ctx context.Context, link *url.URL) (readability.Article, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", link.String(), nil)
 	if err != nil {
@@ -76,7 +75,6 @@ func fetchAndParse(ctx context.Context, link *url.URL) (readability.Article, err
 	return ReadabilityParser.ParseDocument(node, link)
 }
 
-// AIMPROV: Create a function to handle URL normalization and validation.
 func normalizeAndValidateURL(rawLink string) (*url.URL, error) {
 	if rawLink == "" {
 		return nil, errors.New("url parameter is empty")
