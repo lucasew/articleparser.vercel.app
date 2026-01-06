@@ -131,6 +131,23 @@ func getFormat(r *http.Request) string {
 	return format
 }
 
+// renderArticle executes the template with the given article data.
+func renderArticle(article readability.Article) (*bytes.Buffer, error) {
+	buf := &bytes.Buffer{}
+	// inject safe HTML content
+	data := struct {
+		Title   string
+		Content template.HTML
+	}{
+		Title:   article.Title,
+		Content: template.HTML(article.Content),
+	}
+	if err := DefaultTemplate.Execute(buf, data); err != nil {
+		return nil, err
+	}
+	return buf, nil
+}
+
 // handler is the actual logic
 func handler(w http.ResponseWriter, r *http.Request) {
 	rawLink := r.URL.Query().Get("url")
@@ -154,17 +171,10 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	buf := &bytes.Buffer{}
-	// inject safe HTML content
-	data := struct {
-		Title   string
-		Content template.HTML
-	}{
-		Title:   article.Title,
-		Content: template.HTML(article.Content),
-	}
-	if err = DefaultTemplate.Execute(buf, data); err != nil {
-		writeError(w, http.StatusInternalServerError, "template render failed")
+	buf, err := renderArticle(article)
+	if err != nil {
+		log.Printf("error rendering article for %q: %v", rawLink, err)
+		writeError(w, http.StatusInternalServerError, "Failed to render article")
 		return
 	}
 
