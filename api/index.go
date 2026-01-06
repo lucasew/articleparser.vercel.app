@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-shiori/go-readability"
+	"codeberg.org/readeck/go-readability/v2"
 	"github.com/mattn/godown"
 	"golang.org/x/net/context"
 	"golang.org/x/net/html"
@@ -171,25 +171,37 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	buf, err := renderArticle(article)
-	if err != nil {
-		log.Printf("error rendering article for %q: %v", rawLink, err)
-		writeError(w, http.StatusInternalServerError, "Failed to render article")
+	contentBuf := &bytes.Buffer{}
+	if err := article.RenderHTML(contentBuf); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to render article content")
 		return
 	}
 
 	switch format {
 	case "html":
+		buf := &bytes.Buffer{}
+		// inject safe HTML content
+		data := struct {
+			Title   string
+			Content template.HTML
+		}{
+			Title:   article.Title(),
+			Content: template.HTML(contentBuf.String()),
+		}
+		if err = DefaultTemplate.Execute(buf, data); err != nil {
+			writeError(w, http.StatusInternalServerError, "template render failed")
+			return
+		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		io.Copy(w, buf)
 	case "md", "markdown":
 		w.Header().Set("Content-Type", "text/markdown")
-		godown.Convert(w, buf, nil)
+		godown.Convert(w, contentBuf, nil)
 	case "json":
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{
-			"title":   article.Title,
-			"content": article.Content,
+			"title":   article.Title(),
+			"content": contentBuf.String(),
 		})
 	default:
 		writeError(w, http.StatusBadRequest, "invalid format")
