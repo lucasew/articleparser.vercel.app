@@ -127,8 +127,37 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	securityHeadersMiddleware(http.HandlerFunc(handler)).ServeHTTP(w, r)
 }
 
-// getFormat extracts the 'format' query param, defaulting to "html"
-func getFormat(r *http.Request) string {
+// formatHandler defines the function signature for handling different output formats.
+type formatHandler func(w http.ResponseWriter, article readability.Article, buf *bytes.Buffer)
+
+func formatHTML(w http.ResponseWriter, _ readability.Article, buf *bytes.Buffer) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	io.Copy(w, buf)
+}
+
+func formatMarkdown(w http.ResponseWriter, _ readability.Article, buf *bytes.Buffer) {
+	w.Header().Set("Content-Type", "text/markdown")
+	godown.Convert(w, buf, nil)
+}
+
+func formatJSON(w http.ResponseWriter, article readability.Article, _ *bytes.Buffer) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"title":   article.Title,
+		"content": article.Content,
+	})
+}
+
+var formatters = map[string]formatHandler{
+	"html":     formatHTML,
+	"md":       formatMarkdown,
+	"markdown": formatMarkdown,
+	"json":     formatJSON,
+}
+
+// handler is the actual logic
+func handler(w http.ResponseWriter, r *http.Request) {
+	rawLink := r.URL.Query().Get("url")
 	format := r.URL.Query().Get("format")
 	if format == "" {
 		return "html"
@@ -186,35 +215,12 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	switch format {
-	case "html":
-		buf := &bytes.Buffer{}
-		// inject safe HTML content
-		data := struct {
-			Title   string
-			Content template.HTML
-		}{
-			Title:   article.Title(),
-			Content: template.HTML(contentBuf.String()),
-		}
-		if err = DefaultTemplate.Execute(buf, data); err != nil {
-			writeError(w, http.StatusInternalServerError, "template render failed")
-			return
-		}
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		io.Copy(w, buf)
-	case "md", "markdown":
-		w.Header().Set("Content-Type", "text/markdown")
-		godown.Convert(w, contentBuf, nil)
-	case "json":
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{
-			"title":   article.Title(),
-			"content": contentBuf.String(),
-		})
-	default:
+	formatter, found := formatters[format]
+	if !found {
 		writeError(w, http.StatusBadRequest, "invalid format")
+		return
 	}
+	formatter(w, article, buf)
 }
 
 // writeError writes a JSON error message with given status
