@@ -59,7 +59,7 @@ func TestFetchAndParse(t *testing.T) {
 		t.Fatalf("failed to parse server URL: %v", err)
 	}
 	ctx := context.Background()
-	art, err := fetchAndParse(ctx, u)
+	art, err := fetchAndParse(ctx, u, "")
 	if err != nil {
 		t.Fatalf("fetchAndParse returned error: %v", err)
 	}

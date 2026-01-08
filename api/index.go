@@ -53,12 +53,16 @@ var (
 	maxContentBytes = int64(2 * 1024 * 1024)
 )
 
-func fetchAndParse(ctx context.Context, link *url.URL) (readability.Article, error) {
+func fetchAndParse(ctx context.Context, link *url.URL, userAgent string) (readability.Article, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", link.String(), nil)
 	if err != nil {
 		return readability.Article{}, err
 	}
-	req.Header.Set("User-Agent", "Sentinel/1.0 (+https://github.com/lucasew/readability-web)")
+	if userAgent == "" {
+		// use a generic user-agent as fallback
+		userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+	}
+	req.Header.Set("User-Agent", userAgent)
 
 	res, err := httpClient.Do(req)
 	if err != nil {
@@ -167,7 +171,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
-	article, err := fetchAndParse(ctx, link)
+	article, err := fetchAndParse(ctx, link, r.UserAgent())
 	if err != nil {
 		log.Printf("error fetching or parsing URL %q: %v", rawLink, err)
 		writeError(w, http.StatusUnprocessableEntity, "Failed to process URL")
