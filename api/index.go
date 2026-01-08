@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-shiori/go-readability"
+	"codeberg.org/readeck/go-readability/v2"
 	"github.com/mattn/godown"
 	"golang.org/x/net/context"
 	"golang.org/x/net/html"
@@ -53,12 +53,18 @@ var (
 	maxContentBytes = int64(2 * 1024 * 1024)
 )
 
-// AIMPROV: Extract fetching and parsing logic into a separate function to improve readability and testability.
-func fetchAndParse(ctx context.Context, link *url.URL) (readability.Article, error) {
+const defaultUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0"
+
+func fetchAndParse(ctx context.Context, link *url.URL, userAgent string) (readability.Article, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", link.String(), nil)
 	if err != nil {
 		return readability.Article{}, err
 	}
+	if userAgent == "" {
+		// use a generic user-agent as fallback
+		userAgent = defaultUserAgent
+	}
+	req.Header.Set("User-Agent", userAgent)
 
 	res, err := httpClient.Do(req)
 	if err != nil {
@@ -76,7 +82,6 @@ func fetchAndParse(ctx context.Context, link *url.URL) (readability.Article, err
 	return ReadabilityParser.ParseDocument(node, link)
 }
 
-// AIMPROV: Create a function to handle URL normalization and validation.
 func normalizeAndValidateURL(rawLink string) (*url.URL, error) {
 	if rawLink == "" {
 		return nil, errors.New("url parameter is empty")
@@ -155,36 +160,58 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	rawLink := r.URL.Query().Get("url")
 	format := r.URL.Query().Get("format")
 	if format == "" {
-		format = "html"
+		return "html"
 	}
+	return format
+}
+
+// renderArticle executes the template with the given article data.
+func renderArticle(article readability.Article) (*bytes.Buffer, error) {
+	buf := &bytes.Buffer{}
+	contentBuf := &bytes.Buffer{}
+	if err := article.RenderHTML(contentBuf); err != nil {
+		return nil, err
+	}
+	// inject safe HTML content
+	data := struct {
+		Title   string
+		Content template.HTML
+	}{
+		Title:   article.Title(),
+		Content: template.HTML(contentBuf.String()),
+	}
+	if err := DefaultTemplate.Execute(buf, data); err != nil {
+		return nil, err
+	}
+	return buf, nil
+}
+
+// handler is the actual logic
+func handler(w http.ResponseWriter, r *http.Request) {
+	rawLink := r.URL.Query().Get("url")
+	format := getFormat(r)
 	log.Printf("request: %s %s", format, rawLink)
 
 	link, err := normalizeAndValidateURL(rawLink)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		log.Printf("error normalizing URL %q: %v", rawLink, err)
+		writeError(w, http.StatusBadRequest, "Invalid URL provided")
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
-	article, err := fetchAndParse(ctx, link)
+	article, err := fetchAndParse(ctx, link, r.UserAgent())
 	if err != nil {
-		writeError(w, http.StatusUnprocessableEntity, err.Error())
+		log.Printf("error fetching or parsing URL %q: %v", rawLink, err)
+		writeError(w, http.StatusUnprocessableEntity, "Failed to process URL")
 		return
 	}
 
-	buf := &bytes.Buffer{}
-	// inject safe HTML content
-	data := struct {
-		Title   string
-		Content template.HTML
-	}{
-		Title:   article.Title,
-		Content: template.HTML(article.Content),
-	}
-	if err = DefaultTemplate.Execute(buf, data); err != nil {
-		writeError(w, http.StatusInternalServerError, "template render failed")
+	contentBuf := &bytes.Buffer{}
+	if err := article.RenderHTML(contentBuf); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to render article content")
 		return
 	}
 
