@@ -53,11 +53,18 @@ var (
 	maxContentBytes = int64(2 * 1024 * 1024)
 )
 
-func fetchAndParse(ctx context.Context, link *url.URL) (readability.Article, error) {
+const defaultUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0"
+
+func fetchAndParse(ctx context.Context, link *url.URL, userAgent string) (readability.Article, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", link.String(), nil)
 	if err != nil {
 		return readability.Article{}, err
 	}
+	if userAgent == "" {
+		// use a generic user-agent as fallback
+		userAgent = defaultUserAgent
+	}
+	req.Header.Set("User-Agent", userAgent)
 
 	res, err := httpClient.Do(req)
 	if err != nil {
@@ -132,13 +139,17 @@ func getFormat(r *http.Request) string {
 // renderArticle executes the template with the given article data.
 func renderArticle(article readability.Article) (*bytes.Buffer, error) {
 	buf := &bytes.Buffer{}
+	contentBuf := &bytes.Buffer{}
+	if err := article.RenderHTML(contentBuf); err != nil {
+		return nil, err
+	}
 	// inject safe HTML content
 	data := struct {
 		Title   string
 		Content template.HTML
 	}{
-		Title:   article.Title,
-		Content: template.HTML(article.Content),
+		Title:   article.Title(),
+		Content: template.HTML(contentBuf.String()),
 	}
 	if err := DefaultTemplate.Execute(buf, data); err != nil {
 		return nil, err
@@ -162,7 +173,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
-	article, err := fetchAndParse(ctx, link)
+	article, err := fetchAndParse(ctx, link, r.UserAgent())
 	if err != nil {
 		log.Printf("error fetching or parsing URL %q: %v", rawLink, err)
 		writeError(w, http.StatusUnprocessableEntity, "Failed to process URL")
