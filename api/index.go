@@ -58,6 +58,7 @@ func fetchAndParse(ctx context.Context, link *url.URL) (readability.Article, err
 	if err != nil {
 		return readability.Article{}, err
 	}
+	req.Header.Set("User-Agent", "Sentinel/1.0 (+https://github.com/lucasew/readability-web)")
 
 	res, err := httpClient.Do(req)
 	if err != nil {
@@ -132,13 +133,17 @@ func getFormat(r *http.Request) string {
 // renderArticle executes the template with the given article data.
 func renderArticle(article readability.Article) (*bytes.Buffer, error) {
 	buf := &bytes.Buffer{}
+	contentBuf := &bytes.Buffer{}
+	if err := article.RenderHTML(contentBuf); err != nil {
+		return nil, err
+	}
 	// inject safe HTML content
 	data := struct {
 		Title   string
 		Content template.HTML
 	}{
-		Title:   article.Title,
-		Content: template.HTML(article.Content),
+		Title:   article.Title(),
+		Content: template.HTML(contentBuf.String()),
 	}
 	if err := DefaultTemplate.Execute(buf, data); err != nil {
 		return nil, err
