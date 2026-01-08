@@ -53,6 +53,8 @@ var (
 	maxContentBytes = int64(2 * 1024 * 1024)
 )
 
+const defaultUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0"
+
 func fetchAndParse(ctx context.Context, link *url.URL, userAgent string) (readability.Article, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", link.String(), nil)
 	if err != nil {
@@ -60,7 +62,7 @@ func fetchAndParse(ctx context.Context, link *url.URL, userAgent string) (readab
 	}
 	if userAgent == "" {
 		// use a generic user-agent as fallback
-		userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0"
+		userAgent = defaultUserAgent
 	}
 	req.Header.Set("User-Agent", userAgent)
 
