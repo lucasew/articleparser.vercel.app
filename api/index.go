@@ -43,10 +43,7 @@ var (
 	httpClient = &http.Client{
 		Timeout: 10 * time.Second,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			if len(via) >= 5 {
-				return errors.New("stopped after 5 redirects")
-			}
-			return nil
+			return http.ErrUseLastResponse
 		},
 	}
 	// limit download size to avoid OOM (2 MiB)
@@ -56,21 +53,43 @@ var (
 const defaultUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0"
 
 func fetchAndParse(ctx context.Context, link *url.URL, userAgent string) (readability.Article, error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", link.String(), nil)
-	if err != nil {
-		return readability.Article{}, err
-	}
-	if userAgent == "" {
-		// use a generic user-agent as fallback
-		userAgent = defaultUserAgent
-	}
-	req.Header.Set("User-Agent", userAgent)
+	var res *http.Response
+	var err error
 
-	res, err := httpClient.Do(req)
-	if err != nil {
-		return readability.Article{}, err
+	for i := 0; i < 5; i++ {
+		req, err := http.NewRequestWithContext(ctx, "GET", link.String(), nil)
+		if err != nil {
+			return readability.Article{}, err
+		}
+		if userAgent == "" {
+			// use a generic user-agent as fallback
+			userAgent = defaultUserAgent
+		}
+		req.Header.Set("User-Agent", userAgent)
+
+		res, err = httpClient.Do(req)
+		if err != nil {
+			return readability.Article{}, err
+		}
+		defer res.Body.Close()
+
+		if res.StatusCode >= 300 && res.StatusCode <= 399 {
+			redirectURL, err := res.Location()
+			if err != nil {
+				return readability.Article{}, fmt.Errorf("failed to get redirect location: %w", err)
+			}
+			link, err = normalizeAndValidateURL(redirectURL.String())
+			if err != nil {
+				return readability.Article{}, fmt.Errorf("invalid redirect URL: %w", err)
+			}
+			continue
+		}
+		break
 	}
-	defer res.Body.Close()
+
+	if res == nil {
+		return readability.Article{}, errors.New("failed to fetch URL")
+	}
 
 	// limit body size to prevent OOM
 	reader := io.LimitReader(res.Body, maxContentBytes)
