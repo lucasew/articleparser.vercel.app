@@ -140,11 +140,11 @@ func formatMarkdown(w http.ResponseWriter, _ readability.Article, buf *bytes.Buf
 	godown.Convert(w, buf, nil)
 }
 
-func formatJSON(w http.ResponseWriter, article readability.Article, _ *bytes.Buffer) {
+func formatJSON(w http.ResponseWriter, article readability.Article, buf *bytes.Buffer) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
-		"title":   article.Title,
-		"content": article.Content,
+		"title":   article.Title(),
+		"content": buf.String(),
 	})
 }
 
@@ -155,9 +155,8 @@ var formatters = map[string]formatHandler{
 	"json":     formatJSON,
 }
 
-// handler is the actual logic
-func handler(w http.ResponseWriter, r *http.Request) {
-	rawLink := r.URL.Query().Get("url")
+// getFormat determines the output format from the request, defaulting to "html".
+func getFormat(r *http.Request) string {
 	format := r.URL.Query().Get("format")
 	if format == "" {
 		return "html"
@@ -220,7 +219,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid format")
 		return
 	}
-	formatter(w, article, buf)
+	formatter(w, article, contentBuf)
 }
 
 // writeError writes a JSON error message with given status
