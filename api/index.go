@@ -43,10 +43,7 @@ var (
 	httpClient = &http.Client{
 		Timeout: 10 * time.Second,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			if len(via) >= 5 {
-				return errors.New("stopped after 5 redirects")
-			}
-			return nil
+			return http.ErrUseLastResponse
 		},
 	}
 	// limit download size to avoid OOM (2 MiB)
