@@ -3,3 +3,8 @@
 **Root Cause:** The presence of a duplicate function and a call to a non-existent function was the result of an incomplete refactoring effort. The developer likely intended to extract the format-determining logic into a separate `getFormat` function but failed to complete the task, leaving the old `handler` function in place and causing a build failure.
 **Solution:** I removed the duplicate, incomplete `handler` function, created the missing `getFormat` function by extracting the format-determining logic from the old `handler`, and updated the main `handler` function to correctly call the new `getFormat` function. I also corrected the `formatter` call to use the correct buffer (`contentBuf`).
 **Pattern:** When refactoring, it is important to ensure that all old code is removed and that all calls to new functions are correctly updated. Leaving behind remnants of old code can lead to compilation errors and make the codebase more difficult to understand and maintain.
+## 2024-08-02 - Remove dead code and fix HTML rendering
+**Issue:** The `renderArticle` function in `api/index.go` was unused, and the `formatHTML` function did not correctly render the full HTML template, resulting in a malformed response.
+**Root Cause:** The `renderArticle` function was likely a remnant of a previous refactoring effort, and the `formatHTML` function was incomplete, failing to use the HTML template.
+**Solution:** I removed the unused `renderArticle` function and refactored `formatHTML` to correctly execute the HTML template, ensuring a well-formed HTML response.
+**Pattern:** Regularly scan for and remove dead code to improve maintainability. Ensure all output formatters correctly and completely render their expected content.

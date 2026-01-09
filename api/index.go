@@ -130,9 +130,20 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 // formatHandler defines the function signature for handling different output formats.
 type formatHandler func(w http.ResponseWriter, article readability.Article, buf *bytes.Buffer)
 
-func formatHTML(w http.ResponseWriter, _ readability.Article, buf *bytes.Buffer) {
+func formatHTML(w http.ResponseWriter, article readability.Article, contentBuf *bytes.Buffer) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	io.Copy(w, buf)
+	// inject safe HTML content
+	data := struct {
+		Title   string
+		Content template.HTML
+	}{
+		Title:   article.Title(),
+		Content: template.HTML(contentBuf.String()),
+	}
+	if err := DefaultTemplate.Execute(w, data); err != nil {
+		// at this point, we can't write a JSON error, so we log it
+		log.Printf("error executing HTML template: %v", err)
+	}
 }
 
 func formatMarkdown(w http.ResponseWriter, _ readability.Article, buf *bytes.Buffer) {
@@ -162,27 +173,6 @@ func getFormat(r *http.Request) string {
 		return "html"
 	}
 	return format
-}
-
-// renderArticle executes the template with the given article data.
-func renderArticle(article readability.Article) (*bytes.Buffer, error) {
-	buf := &bytes.Buffer{}
-	contentBuf := &bytes.Buffer{}
-	if err := article.RenderHTML(contentBuf); err != nil {
-		return nil, err
-	}
-	// inject safe HTML content
-	data := struct {
-		Title   string
-		Content template.HTML
-	}{
-		Title:   article.Title(),
-		Content: template.HTML(contentBuf.String()),
-	}
-	if err := DefaultTemplate.Execute(buf, data); err != nil {
-		return nil, err
-	}
-	return buf, nil
 }
 
 // handler is the actual logic
