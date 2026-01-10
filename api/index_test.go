@@ -19,8 +19,6 @@ func TestNormalizeAndValidateURL(t *testing.T) {
 		{"example.com", "https://example.com", false},
 		{"http://foo.bar", "http://foo.bar", false},
 		{"ftp://foo.bar", "", true},
-		{"127.0.0.1", "", true},
-		{"192.168.0.5/path", "", true},
 	}
 	for _, tt := range tests {
 		u, err := normalizeAndValidateURL(tt.raw)
@@ -75,5 +73,32 @@ func TestFetchAndParse(t *testing.T) {
 
 	if !strings.Contains(content.String(), "<p>Hello World") {
 		t.Errorf("Article.Content missing expected paragraph, got: %q", content.String())
+	}
+}
+
+func TestSSRFProtection(t *testing.T) {
+	// a dummy server that should never be reached
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("dialer did not block private IP, connection was made")
+	}))
+	defer srv.Close()
+
+	// get loopback address of the server
+	// srv.URL will be something like http://127.0.0.1:54321
+	// we want to test if the dialer blocks the connection to 127.0.0.1
+	// so, we don't use the server's client, we use our own httpClient
+	req, err := http.NewRequest("GET", srv.URL, nil)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+
+	_, err = httpClient.Do(req)
+	if err == nil {
+		t.Fatal("expected an error when dialing a private IP, but got none")
+	}
+	// check if the error is the one we expect from our dialer
+	// the error is wrapped, so we need to check for the substring
+	if !strings.Contains(err.Error(), "refusing to connect to private network address") {
+		t.Errorf("expected error to contain 'refusing to connect to private network address', but got: %v", err)
 	}
 }
