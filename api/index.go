@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"syscall"
 	"time"
 
 	"codeberg.org/readeck/go-readability/v2"
@@ -41,6 +42,9 @@ var (
 	ReadabilityParser = readability.NewParser()
 	// httpClient used for fetching remote articles with timeouts and redirect policy
 	httpClient = &http.Client{
+		Transport: &http.Transport{
+			DialContext: newSafeDialer().DialContext,
+		},
 		Timeout: 10 * time.Second,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if len(via) >= 5 {
@@ -52,6 +56,30 @@ var (
 	// limit download size to avoid OOM (2 MiB)
 	maxContentBytes = int64(2 * 1024 * 1024)
 )
+
+func newSafeDialer() *net.Dialer {
+	dialer := &net.Dialer{
+		Timeout:   30 * time.Second,
+		KeepAlive: 30 * time.Second,
+		Control: func(network, address string, c syscall.RawConn) error {
+			host, _, err := net.SplitHostPort(address)
+			if err != nil {
+				return err
+			}
+			ips, err := net.LookupIP(host)
+			if err != nil {
+				return err
+			}
+			for _, ip := range ips {
+				if ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
+					return errors.New("refusing to connect to private network address")
+				}
+			}
+			return nil
+		},
+	}
+	return dialer
+}
 
 const defaultUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0"
 
@@ -98,16 +126,6 @@ func normalizeAndValidateURL(rawLink string) (*url.URL, error) {
 	// only allow http(s)
 	if link.Scheme != "http" && link.Scheme != "https" {
 		return nil, errors.New("unsupported URL scheme")
-	}
-	host := link.Hostname()
-	// resolve and block private IPs
-	ips, err := net.LookupIP(host)
-	if err == nil {
-		for _, ip := range ips {
-			if ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
-				return nil, errors.New("refusing private network address")
-			}
-		}
 	}
 	return link, nil
 }
