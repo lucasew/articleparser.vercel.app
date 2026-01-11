@@ -21,6 +21,15 @@ import (
 	"golang.org/x/net/html"
 )
 
+const (
+	maxRedirects      = 5
+	httpClientTimeout = 10 * time.Second
+	maxBodySize       = int64(2 * 1024 * 1024) // 2 MiB
+	dialerTimeout     = 30 * time.Second
+	dialerKeepAlive   = 30 * time.Second
+	handlerTimeout    = 5 * time.Second
+)
+
 const Template = `
 <!DOCTYPE html>
 <html>
@@ -45,22 +54,20 @@ var (
 		Transport: &http.Transport{
 			DialContext: newSafeDialer().DialContext,
 		},
-		Timeout: 10 * time.Second,
+		Timeout: httpClientTimeout,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			if len(via) >= 5 {
-				return errors.New("stopped after 5 redirects")
+			if len(via) >= maxRedirects {
+				return fmt.Errorf("stopped after %d redirects", maxRedirects)
 			}
 			return nil
 		},
 	}
-	// limit download size to avoid OOM (2 MiB)
-	maxContentBytes = int64(2 * 1024 * 1024)
 )
 
 func newSafeDialer() *net.Dialer {
 	dialer := &net.Dialer{
-		Timeout:   30 * time.Second,
-		KeepAlive: 30 * time.Second,
+		Timeout:   dialerTimeout,
+		KeepAlive: dialerKeepAlive,
 		Control: func(network, address string, c syscall.RawConn) error {
 			host, _, err := net.SplitHostPort(address)
 			if err != nil {
@@ -101,7 +108,7 @@ func fetchAndParse(ctx context.Context, link *url.URL, userAgent string) (readab
 	defer res.Body.Close()
 
 	// limit body size to prevent OOM
-	reader := io.LimitReader(res.Body, maxContentBytes)
+	reader := io.LimitReader(res.Body, maxBodySize)
 	node, err := html.Parse(reader)
 	if err != nil {
 		return readability.Article{}, err
@@ -206,7 +213,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), handlerTimeout)
 	defer cancel()
 
 	article, err := fetchAndParse(ctx, link, r.UserAgent())
