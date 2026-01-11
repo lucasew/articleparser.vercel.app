@@ -10,12 +10,14 @@ import (
 )
 
 func TestNormalizeAndValidateURL(t *testing.T) {
+	longURL := "https://example.com/" + strings.Repeat("a", 2048)
 	tests := []struct {
 		raw       string
 		want      string // expected host (with scheme)
 		shouldErr bool
 	}{
 		{"", "", true},
+		{longURL, "", true},
 		{"example.com", "https://example.com", false},
 		{"http://foo.bar", "http://foo.bar", false},
 		{"ftp://foo.bar", "", true},

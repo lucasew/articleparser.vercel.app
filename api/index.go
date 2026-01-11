@@ -114,6 +114,9 @@ func normalizeAndValidateURL(rawLink string) (*url.URL, error) {
 	if rawLink == "" {
 		return nil, errors.New("url parameter is empty")
 	}
+	if len(rawLink) > 2048 {
+		return nil, errors.New("url is too long")
+	}
 	// add scheme if missing
 	if !strings.Contains(rawLink, "://") {
 		// default to https if no scheme provided
