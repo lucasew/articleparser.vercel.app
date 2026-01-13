@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,7 +18,6 @@ import (
 
 	"codeberg.org/readeck/go-readability/v2"
 	"github.com/mattn/godown"
-	"golang.org/x/net/context"
 	"golang.org/x/net/html"
 )
 
@@ -244,7 +244,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	article, err := fetchAndParse(ctx, link, r.UserAgent())
 	if err != nil {
 		log.Printf("error fetching or parsing URL %q: %v", rawLink, err)
-		writeError(w, http.StatusUnprocessableEntity, "Failed to process URL")
+		writeError(w, http.StatusUnprocessableEntity, fmt.Sprintf("Failed to process URL: %s", link))
 		return
 	}
 
