@@ -1,5 +1,9 @@
 {
   "rewrites": [
+    {
+      "source": "/api/extract/:url*",
+      "destination": "/api?source=extract"
+    },
     {"source": "/api/:format/:url*", "destination": "/api"}
   ],
   "trailingSlash": false

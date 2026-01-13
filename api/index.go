@@ -193,17 +193,50 @@ var formatters = map[string]formatHandler{
 
 // getFormat determines the output format from the request, defaulting to "html".
 func getFormat(r *http.Request) string {
-	format := r.URL.Query().Get("format")
-	if format == "" {
+	// /api/:format/:url*
+	// /api/html/https://example.com
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) > 2 && parts[2] != "" {
+		return parts[2]
+	}
+	return "html"
+}
+
+// getFormatFromAcceptHeader determines the output format from the Accept header.
+func getFormatFromAcceptHeader(r *http.Request) string {
+	acceptHeader := r.Header.Get("Accept")
+	switch {
+	case strings.Contains(acceptHeader, "application/json"):
+		return "json"
+	case strings.Contains(acceptHeader, "text/markdown"):
+		return "md"
+	case strings.Contains(acceptHeader, "text/html"):
+		return "html"
+	default:
+		// default to html if no specific format is requested
 		return "html"
 	}
-	return format
+}
+
+func getURL(r *http.Request) string {
+	// /api/:format/:url*
+	// /api/html/https://example.com
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) > 3 {
+		return strings.Join(parts[3:], "/")
+	}
+	return r.URL.Query().Get("url")
 }
 
 // handler is the actual logic
 func handler(w http.ResponseWriter, r *http.Request) {
-	rawLink := r.URL.Query().Get("url")
-	format := getFormat(r)
+	rawLink := getURL(r)
+	var format string
+	if r.URL.Query().Get("source") == "extract" {
+		format = getFormatFromAcceptHeader(r)
+	} else {
+		format = getFormat(r)
+	}
 	log.Printf("request: %s %s", format, rawLink)
 
 	link, err := normalizeAndValidateURL(rawLink)
