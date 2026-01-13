@@ -121,20 +121,12 @@ func normalizeAndValidateURL(rawLink string) (*url.URL, error) {
 	if rawLink == "" {
 		return nil, errors.New("url parameter is empty")
 	}
-	// add scheme if missing
-	if !strings.Contains(rawLink, "://") {
-		// default to https if no scheme provided
-		rawLink = fmt.Sprintf("https://%s", rawLink)
-	}
-	link, err := url.Parse(rawLink)
+	u, err := url.Parse(rawLink)
+	u.Scheme = "https"
 	if err != nil {
 		return nil, fmt.Errorf("invalid URL: %w", err)
 	}
-	// only allow http(s)
-	if link.Scheme != "http" && link.Scheme != "https" {
-		return nil, errors.New("unsupported URL scheme")
-	}
-	return link, nil
+	return u, nil
 }
 
 func securityHeadersMiddleware(next http.Handler) http.Handler {
