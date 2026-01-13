@@ -18,6 +18,8 @@ func TestNormalizeAndValidateURL(t *testing.T) {
 		{"", "", true},
 		{"example.com", "https://example.com", false},
 		{"http://foo.bar", "http://foo.bar", false},
+		{"https:/go.dev/play", "https://go.dev", false},
+		{"http:/example.com", "http://example.com", false},
 		{"ftp://foo.bar", "", true},
 	}
 	for _, tt := range tests {

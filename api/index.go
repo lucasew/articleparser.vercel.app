@@ -121,6 +121,14 @@ func normalizeAndValidateURL(rawLink string) (*url.URL, error) {
 	if rawLink == "" {
 		return nil, errors.New("url parameter is empty")
 	}
+
+	// Fix browser/proxy normalization of :// to :/
+	if strings.HasPrefix(rawLink, "http:/") && !strings.HasPrefix(rawLink, "http://") {
+		rawLink = "http://" + rawLink[6:]
+	} else if strings.HasPrefix(rawLink, "https:/") && !strings.HasPrefix(rawLink, "https://") {
+		rawLink = "https://" + rawLink[7:]
+	}
+
 	// add scheme if missing
 	if !strings.Contains(rawLink, "://") {
 		// default to https if no scheme provided
@@ -184,25 +192,85 @@ func formatJSON(w http.ResponseWriter, article readability.Article, buf *bytes.B
 	})
 }
 
+func formatText(w http.ResponseWriter, _ readability.Article, buf *bytes.Buffer) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Write([]byte(buf.String()))
+}
+
 var formatters = map[string]formatHandler{
 	"html":     formatHTML,
 	"md":       formatMarkdown,
 	"markdown": formatMarkdown,
 	"json":     formatJSON,
+	"text":     formatText,
+	"txt":      formatText,
+}
+
+// isLLM attempts to detect if the request is coming from an LLM or a tool used by one.
+func isLLM(r *http.Request) bool {
+	ua := strings.ToLower(r.UserAgent())
+	llmStrings := []string{
+		"gptbot",
+		"chatgpt",
+		"claude",
+		"googlebot",
+		"bingbot",
+		"anthropic",
+		"perplexity",
+		"claudebot",
+		"github-copilot",
+	}
+	for _, s := range llmStrings {
+		if strings.Contains(ua, s) {
+			return true
+		}
+	}
+	// Also check Accept header for markdown preference
+	accept := strings.ToLower(r.Header.Get("Accept"))
+	if strings.Contains(accept, "text/markdown") || strings.Contains(accept, "text/x-markdown") {
+		return true
+	}
+	return false
 }
 
 // getFormat determines the output format from the request, defaulting to "html".
 func getFormat(r *http.Request) string {
 	format := r.URL.Query().Get("format")
-	if format == "" {
-		return "html"
+	if format != "" {
+		return format
 	}
-	return format
+	if isLLM(r) {
+		return "md"
+	}
+	return "html"
 }
 
 // handler is the actual logic
 func handler(w http.ResponseWriter, r *http.Request) {
 	rawLink := r.URL.Query().Get("url")
+	if rawLink != "" {
+		// Reconstruct URL if it was split by query parameters during rewrite
+		u, err := url.Parse(rawLink)
+		if err == nil {
+			targetQuery := u.Query()
+			originalQuery := r.URL.Query()
+			hasChanges := false
+			for k, vs := range originalQuery {
+				if k == "url" || k == "format" {
+					continue
+				}
+				hasChanges = true
+				for _, v := range vs {
+					targetQuery.Add(k, v)
+				}
+			}
+			if hasChanges {
+				u.RawQuery = targetQuery.Encode()
+				rawLink = u.String()
+			}
+		}
+	}
+
 	format := getFormat(r)
 	log.Printf("request: %s %s", format, rawLink)
 
