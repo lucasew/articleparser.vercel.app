@@ -18,6 +18,8 @@ func TestNormalizeAndValidateURL(t *testing.T) {
 		{"", "", true},
 		{"example.com", "https://example.com", false},
 		{"http://foo.bar", "http://foo.bar", false},
+		{"https:/go.dev/play", "https://go.dev", false},
+		{"http:/example.com", "http://example.com", false},
 		{"ftp://foo.bar", "", true},
 	}
 	for _, tt := range tests {
@@ -57,7 +59,8 @@ func TestFetchAndParse(t *testing.T) {
 		t.Fatalf("failed to parse server URL: %v", err)
 	}
 	ctx := context.Background()
-	art, err := fetchAndParse(ctx, u, "")
+	req := httptest.NewRequest("GET", "/", nil)
+	art, err := fetchAndParse(ctx, u, req)
 	if err != nil {
 		t.Fatalf("fetchAndParse returned error: %v", err)
 	}

@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"io"
 	"log"
+	"math/rand"
 	"net"
 	"net/http"
 	"net/url"
@@ -88,18 +89,44 @@ func newSafeDialer() *net.Dialer {
 	return dialer
 }
 
-const defaultUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0"
+var userAgentPool = []string{
+	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0",
+	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
+	"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
+	"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:135.0) Gecko/20100101 Firefox/135.0",
+	"Mozilla/5.0 (iPhone; CPU iPhone OS 18_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1",
+}
 
-func fetchAndParse(ctx context.Context, link *url.URL, userAgent string) (readability.Article, error) {
+func getRandomUserAgent() string {
+	return userAgentPool[rand.Intn(len(userAgentPool))]
+}
+
+func fetchAndParse(ctx context.Context, link *url.URL, r *http.Request) (readability.Article, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", link.String(), nil)
 	if err != nil {
 		return readability.Article{}, err
 	}
-	if userAgent == "" {
-		// use a generic user-agent as fallback
-		userAgent = defaultUserAgent
+
+	// Always spoof everything to look like a real browser
+	ua := getRandomUserAgent()
+	req.Header.Set("User-Agent", ua)
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8")
+
+	// Fallback headers from client request
+	if lang := r.Header.Get("Accept-Language"); lang != "" {
+		req.Header.Set("Accept-Language", lang)
+	} else {
+		req.Header.Set("Accept-Language", "en-US,en;q=0.9")
 	}
-	req.Header.Set("User-Agent", userAgent)
+
+	req.Header.Set("Cache-Control", "no-cache")
+	req.Header.Set("Pragma", "no-cache")
+	req.Header.Set("Sec-Ch-Ua-Mobile", "?0")
+	req.Header.Set("Sec-Fetch-Dest", "document")
+	req.Header.Set("Sec-Fetch-Mode", "navigate")
+	req.Header.Set("Sec-Fetch-Site", "none")
+	req.Header.Set("Sec-Fetch-User", "?1")
+	req.Header.Set("Upgrade-Insecure-Requests", "1")
 
 	res, err := httpClient.Do(req)
 	if err != nil {
@@ -121,6 +148,14 @@ func normalizeAndValidateURL(rawLink string) (*url.URL, error) {
 	if rawLink == "" {
 		return nil, errors.New("url parameter is empty")
 	}
+
+	// Fix browser/proxy normalization of :// to :/
+	if strings.HasPrefix(rawLink, "http:/") && !strings.HasPrefix(rawLink, "http://") {
+		rawLink = "http://" + rawLink[6:]
+	} else if strings.HasPrefix(rawLink, "https:/") && !strings.HasPrefix(rawLink, "https://") {
+		rawLink = "https://" + rawLink[7:]
+	}
+
 	// add scheme if missing
 	if !strings.Contains(rawLink, "://") {
 		// default to https if no scheme provided
@@ -184,25 +219,99 @@ func formatJSON(w http.ResponseWriter, article readability.Article, buf *bytes.B
 	})
 }
 
+func formatText(w http.ResponseWriter, _ readability.Article, buf *bytes.Buffer) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Write([]byte(buf.String()))
+}
+
 var formatters = map[string]formatHandler{
 	"html":     formatHTML,
 	"md":       formatMarkdown,
 	"markdown": formatMarkdown,
 	"json":     formatJSON,
+	"text":     formatText,
+	"txt":      formatText,
+}
+
+// isLLM attempts to detect if the request is coming from an LLM or a tool used by one.
+func isLLM(r *http.Request) bool {
+	ua := strings.ToLower(r.UserAgent())
+	llmStrings := []string{
+		"gptbot",
+		"chatgpt",
+		"claude",
+		"googlebot",
+		"bingbot",
+		"anthropic",
+		"perplexity",
+		"claudebot",
+		"github-copilot",
+	}
+	for _, s := range llmStrings {
+		if strings.Contains(ua, s) {
+			return true
+		}
+	}
+	return false
 }
 
 // getFormat determines the output format from the request, defaulting to "html".
 func getFormat(r *http.Request) string {
+	// 1. Priority: Query parameter
 	format := r.URL.Query().Get("format")
-	if format == "" {
+	if format != "" {
+		return format
+	}
+
+	// 2. Priority: Accept Header
+	accept := strings.ToLower(r.Header.Get("Accept"))
+	if strings.Contains(accept, "application/json") {
+		return "json"
+	}
+	if strings.Contains(accept, "text/markdown") || strings.Contains(accept, "text/x-markdown") {
+		return "md"
+	}
+	if strings.Contains(accept, "text/plain") {
+		return "text"
+	}
+	if strings.Contains(accept, "text/html") {
 		return "html"
 	}
-	return format
+
+	// 3. Priority: LLM Detection (defaults to markdown)
+	if isLLM(r) {
+		return "md"
+	}
+
+	return "html"
 }
 
 // handler is the actual logic
 func handler(w http.ResponseWriter, r *http.Request) {
 	rawLink := r.URL.Query().Get("url")
+	if rawLink != "" {
+		// Reconstruct URL if it was split by query parameters during rewrite
+		u, err := url.Parse(rawLink)
+		if err == nil {
+			targetQuery := u.Query()
+			originalQuery := r.URL.Query()
+			hasChanges := false
+			for k, vs := range originalQuery {
+				if k == "url" || k == "format" {
+					continue
+				}
+				hasChanges = true
+				for _, v := range vs {
+					targetQuery.Add(k, v)
+				}
+			}
+			if hasChanges {
+				u.RawQuery = targetQuery.Encode()
+				rawLink = u.String()
+			}
+		}
+	}
+
 	format := getFormat(r)
 	log.Printf("request: %s %s", format, rawLink)
 
@@ -216,7 +325,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), handlerTimeout)
 	defer cancel()
 
-	article, err := fetchAndParse(ctx, link, r.UserAgent())
+	article, err := fetchAndParse(ctx, link, r)
 	if err != nil {
 		log.Printf("error fetching or parsing URL %q: %v", rawLink, err)
 		writeError(w, http.StatusUnprocessableEntity, "Failed to process URL")

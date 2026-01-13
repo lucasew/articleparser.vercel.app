@@ -41,6 +41,22 @@
             <button type="submit">Declutter</button>
         </form>
 
+        <!-- LLM Usage Section -->
+        <hr />
+        <h3>LLM Friendly</h3>
+        <p>
+            You can use this tool directly in your LLM prompts by prefixing any URL:
+        </p>
+        <pre><code>https://articleparser.vercel.app/https://example.com/article</code></pre>
+        <p>
+            It will automatically return <strong>Markdown</strong> when accessed by LLMs or when specified:
+        </p>
+        <ul>
+            <li><code>/md/https://...</code> - Markdown</li>
+            <li><code>/txt/https://...</code> - Plain Text</li>
+            <li><code>/json/https://...</code> - JSON</li>
+        </ul>
+
         <!-- IMPROV: Improved bookmarklet text for clarity -->
         <p>
             Or use the
