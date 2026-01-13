@@ -225,23 +225,37 @@ func isLLM(r *http.Request) bool {
 			return true
 		}
 	}
-	// Also check Accept header for markdown preference
-	accept := strings.ToLower(r.Header.Get("Accept"))
-	if strings.Contains(accept, "text/markdown") || strings.Contains(accept, "text/x-markdown") {
-		return true
-	}
 	return false
 }
 
 // getFormat determines the output format from the request, defaulting to "html".
 func getFormat(r *http.Request) string {
+	// 1. Priority: Query parameter
 	format := r.URL.Query().Get("format")
 	if format != "" {
 		return format
 	}
+
+	// 2. Priority: Accept Header
+	accept := strings.ToLower(r.Header.Get("Accept"))
+	if strings.Contains(accept, "application/json") {
+		return "json"
+	}
+	if strings.Contains(accept, "text/markdown") || strings.Contains(accept, "text/x-markdown") {
+		return "md"
+	}
+	if strings.Contains(accept, "text/plain") {
+		return "text"
+	}
+	if strings.Contains(accept, "text/html") {
+		return "html"
+	}
+
+	// 3. Priority: LLM Detection (defaults to markdown)
 	if isLLM(r) {
 		return "md"
 	}
+
 	return "html"
 }
 
