@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"io"
 	"log"
+	"math/rand"
 	"net"
 	"net/http"
 	"net/url"
@@ -88,18 +89,44 @@ func newSafeDialer() *net.Dialer {
 	return dialer
 }
 
-const defaultUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0"
+var userAgentPool = []string{
+	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0",
+	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
+	"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
+	"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:135.0) Gecko/20100101 Firefox/135.0",
+	"Mozilla/5.0 (iPhone; CPU iPhone OS 18_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1",
+}
 
-func fetchAndParse(ctx context.Context, link *url.URL, userAgent string) (readability.Article, error) {
+func getRandomUserAgent() string {
+	return userAgentPool[rand.Intn(len(userAgentPool))]
+}
+
+func fetchAndParse(ctx context.Context, link *url.URL, r *http.Request) (readability.Article, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", link.String(), nil)
 	if err != nil {
 		return readability.Article{}, err
 	}
-	if userAgent == "" {
-		// use a generic user-agent as fallback
-		userAgent = defaultUserAgent
+
+	// Always spoof everything to look like a real browser
+	ua := getRandomUserAgent()
+	req.Header.Set("User-Agent", ua)
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8")
+
+	// Fallback headers from client request
+	if lang := r.Header.Get("Accept-Language"); lang != "" {
+		req.Header.Set("Accept-Language", lang)
+	} else {
+		req.Header.Set("Accept-Language", "en-US,en;q=0.9")
 	}
-	req.Header.Set("User-Agent", userAgent)
+
+	req.Header.Set("Cache-Control", "no-cache")
+	req.Header.Set("Pragma", "no-cache")
+	req.Header.Set("Sec-Ch-Ua-Mobile", "?0")
+	req.Header.Set("Sec-Fetch-Dest", "document")
+	req.Header.Set("Sec-Fetch-Mode", "navigate")
+	req.Header.Set("Sec-Fetch-Site", "none")
+	req.Header.Set("Sec-Fetch-User", "?1")
+	req.Header.Set("Upgrade-Insecure-Requests", "1")
 
 	res, err := httpClient.Do(req)
 	if err != nil {
@@ -298,7 +325,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), handlerTimeout)
 	defer cancel()
 
-	article, err := fetchAndParse(ctx, link, r.UserAgent())
+	article, err := fetchAndParse(ctx, link, r)
 	if err != nil {
 		log.Printf("error fetching or parsing URL %q: %v", rawLink, err)
 		writeError(w, http.StatusUnprocessableEntity, "Failed to process URL")
