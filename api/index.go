@@ -79,7 +79,7 @@ func newSafeDialer() *net.Dialer {
 				return err
 			}
 			for _, ip := range ips {
-				if ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
+				if ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified() {
 					return errors.New("refusing to connect to private network address")
 				}
 			}
