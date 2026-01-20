@@ -286,31 +286,42 @@ func getFormat(r *http.Request) string {
 	return "html"
 }
 
-// handler is the actual logic
-func handler(w http.ResponseWriter, r *http.Request) {
+// reconstructTargetURL handles cases where query parameters meant for the target URL
+// are interpreted as parameters for the API itself (e.g. due to Vercel rewrites).
+func reconstructTargetURL(r *http.Request) string {
 	rawLink := r.URL.Query().Get("url")
-	if rawLink != "" {
-		// Reconstruct URL if it was split by query parameters during rewrite
-		u, err := url.Parse(rawLink)
-		if err == nil {
-			targetQuery := u.Query()
-			originalQuery := r.URL.Query()
-			hasChanges := false
-			for k, vs := range originalQuery {
-				if k == "url" || k == "format" {
-					continue
-				}
-				hasChanges = true
-				for _, v := range vs {
-					targetQuery.Add(k, v)
-				}
-			}
-			if hasChanges {
-				u.RawQuery = targetQuery.Encode()
-				rawLink = u.String()
-			}
+	if rawLink == "" {
+		return ""
+	}
+
+	// Reconstruct URL if it was split by query parameters during rewrite
+	u, err := url.Parse(rawLink)
+	if err != nil {
+		return rawLink
+	}
+
+	targetQuery := u.Query()
+	originalQuery := r.URL.Query()
+	hasChanges := false
+	for k, vs := range originalQuery {
+		if k == "url" || k == "format" {
+			continue
+		}
+		hasChanges = true
+		for _, v := range vs {
+			targetQuery.Add(k, v)
 		}
 	}
+	if hasChanges {
+		u.RawQuery = targetQuery.Encode()
+		return u.String()
+	}
+	return rawLink
+}
+
+// handler is the actual logic
+func handler(w http.ResponseWriter, r *http.Request) {
+	rawLink := reconstructTargetURL(r)
 
 	format := getFormat(r)
 	log.Printf("request: %s %s", format, rawLink)

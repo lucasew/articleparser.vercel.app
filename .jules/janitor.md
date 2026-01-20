@@ -8,3 +8,8 @@
 **Root Cause:** The `renderArticle` function was likely a remnant of a previous refactoring effort, and the `formatHTML` function was incomplete, failing to use the HTML template.
 **Solution:** I removed the unused `renderArticle` function and refactored `formatHTML` to correctly execute the HTML template, ensuring a well-formed HTML response.
 **Pattern:** Regularly scan for and remove dead code to improve maintainability. Ensure all output formatters correctly and completely render their expected content.
+## 2026-01-20 - Extract URL reconstruction logic into helper
+**Issue:** The `handler` function in `api/index.go` contained complex logic for reconstructing URLs split by Vercel rewrites, mixing request processing with low-level string manipulation.
+**Root Cause:** The logic for handling Vercel's query parameter splitting was implemented inline within the main handler, increasing its cognitive load and complexity.
+**Solution:** I extracted the URL reconstruction logic into a dedicated helper function `reconstructTargetURL`. This adheres to the Single Responsibility Principle and makes the main handler cleaner and easier to read.
+**Pattern:** Extract complex, self-contained logic blocks from main handlers into helper functions to improve readability and testability.
