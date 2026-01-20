@@ -104,4 +104,16 @@ func TestSSRFProtection(t *testing.T) {
 	if !strings.Contains(err.Error(), "refusing to connect to private network address") {
 		t.Errorf("expected error to contain 'refusing to connect to private network address', but got: %v", err)
 	}
+
+	// Test Unspecified IP (0.0.0.0) bypass attempt
+	// We manually construct a URL with 0.0.0.0 and a port (it doesn't need to be open for the check to fire)
+	unspecifiedURL := "http://0.0.0.0:8080"
+	reqUnspecified, _ := http.NewRequest("GET", unspecifiedURL, nil)
+	_, err = httpClient.Do(reqUnspecified)
+	if err == nil {
+		t.Fatal("expected an error when dialing 0.0.0.0, but got none")
+	}
+	if !strings.Contains(err.Error(), "refusing to connect to private network address") {
+		t.Errorf("expected error for 0.0.0.0 to contain 'refusing to connect to private network address', but got: %v", err)
+	}
 }
