@@ -18,6 +18,7 @@ import (
 
 	"codeberg.org/readeck/go-readability/v2"
 	"github.com/mattn/godown"
+	"github.com/microcosm-cc/bluemonday"
 	"golang.org/x/net/context"
 	"golang.org/x/net/html"
 )
@@ -50,6 +51,8 @@ const Template = `
 var (
 	DefaultTemplate   = template.Must(template.New("article").Parse(Template))
 	ReadabilityParser = readability.NewParser()
+	// policy used for sanitizing HTML content
+	policy = bluemonday.UGCPolicy()
 	// httpClient used for fetching remote articles with timeouts and redirect policy
 	httpClient = &http.Client{
 		Transport: &http.Transport{
@@ -198,7 +201,7 @@ func formatHTML(w http.ResponseWriter, article readability.Article, contentBuf *
 		Content template.HTML
 	}{
 		Title:   article.Title(),
-		Content: template.HTML(contentBuf.String()),
+		Content: template.HTML(policy.Sanitize(contentBuf.String())),
 	}
 	if err := DefaultTemplate.Execute(w, data); err != nil {
 		// at this point, we can't write a JSON error, so we log it
