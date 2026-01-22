@@ -101,19 +101,14 @@ func getRandomUserAgent() string {
 	return userAgentPool[rand.Intn(len(userAgentPool))]
 }
 
-func fetchAndParse(ctx context.Context, link *url.URL, r *http.Request) (readability.Article, error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", link.String(), nil)
-	if err != nil {
-		return readability.Article{}, err
-	}
-
+func configureRequest(req *http.Request, userRequest *http.Request) {
 	// Always spoof everything to look like a real browser
 	ua := getRandomUserAgent()
 	req.Header.Set("User-Agent", ua)
 	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8")
 
 	// Fallback headers from client request
-	if lang := r.Header.Get("Accept-Language"); lang != "" {
+	if lang := userRequest.Header.Get("Accept-Language"); lang != "" {
 		req.Header.Set("Accept-Language", lang)
 	} else {
 		req.Header.Set("Accept-Language", "en-US,en;q=0.9")
@@ -127,6 +122,15 @@ func fetchAndParse(ctx context.Context, link *url.URL, r *http.Request) (readabi
 	req.Header.Set("Sec-Fetch-Site", "none")
 	req.Header.Set("Sec-Fetch-User", "?1")
 	req.Header.Set("Upgrade-Insecure-Requests", "1")
+}
+
+func fetchAndParse(ctx context.Context, link *url.URL, r *http.Request) (readability.Article, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", link.String(), nil)
+	if err != nil {
+		return readability.Article{}, err
+	}
+
+	configureRequest(req, r)
 
 	res, err := httpClient.Do(req)
 	if err != nil {

@@ -45,6 +45,12 @@ func TestFetchAndParse(t *testing.T) {
 	// Serve a minimal HTML page
 	htmlBody := `<html><head><title>Test Title</title></head><body><p>Hello World</p></body></html>`
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("User-Agent") == "" {
+			t.Error("expected User-Agent header")
+		}
+		if r.Header.Get("Accept-Language") == "" {
+			t.Error("expected Accept-Language header")
+		}
 		w.Write([]byte(htmlBody))
 	}))
 	defer srv.Close()
