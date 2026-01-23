@@ -13,3 +13,10 @@
 **Root Cause:** The logic for handling Vercel's query parameter splitting was implemented inline within the main handler, increasing its cognitive load and complexity.
 **Solution:** I extracted the URL reconstruction logic into a dedicated helper function `reconstructTargetURL`. This adheres to the Single Responsibility Principle and makes the main handler cleaner and easier to read.
 **Pattern:** Extract complex, self-contained logic blocks from main handlers into helper functions to improve readability and testability.
+
+## 2026-01-23 - Extract request configuration into helper
+
+**Issue:** The `fetchAndParse` function in `api/index.go` contained ~20 lines of header configuration logic, mixing low-level request setup with the high-level flow of fetching and parsing.
+**Root Cause:** As features were added (User-Agent spoofing, security headers), the configuration logic grew inside the main function instead of being encapsulated.
+**Solution:** I extracted the header setting logic into a dedicated `configureRequest` helper function. This isolates the configuration details and makes `fetchAndParse` easier to read and maintain. I also added unit tests for the new helper.
+**Pattern:** Isolate complex object configuration (like `http.Request`) into dedicated helper functions to keep the main logic focused on the process flow.
