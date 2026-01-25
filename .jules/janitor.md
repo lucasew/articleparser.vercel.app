@@ -13,3 +13,8 @@
 **Root Cause:** The logic for handling Vercel's query parameter splitting was implemented inline within the main handler, increasing its cognitive load and complexity.
 **Solution:** I extracted the URL reconstruction logic into a dedicated helper function `reconstructTargetURL`. This adheres to the Single Responsibility Principle and makes the main handler cleaner and easier to read.
 **Pattern:** Extract complex, self-contained logic blocks from main handlers into helper functions to improve readability and testability.
+## 2026-01-25 - Extract HTTP Client and Safe Dialer to separate file
+**Issue:** `api/index.go` contained low-level networking and security configuration (SSRF protection, custom dialer) mixed with high-level request handling logic.
+**Root Cause:** The `httpClient` and `newSafeDialer` were defined in the main handler file, increasing cognitive load and violating the Single Responsibility Principle.
+**Solution:** Extracted `httpClient`, `newSafeDialer`, and related constants into a new file `api/client.go`.
+**Pattern:** Extract infrastructure configuration and security controls into dedicated modules to separate concerns and improve maintainability.
