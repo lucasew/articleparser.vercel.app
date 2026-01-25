@@ -10,32 +10,32 @@ import (
 )
 
 const (
-	maxRedirects      = 5
-	httpClientTimeout = 10 * time.Second
-	dialerTimeout     = 30 * time.Second
-	dialerKeepAlive   = 30 * time.Second
+	MAX_REDIRECTS       = 5
+	HTTP_CLIENT_TIMEOUT = 10 * time.Second
+	DIALER_TIMEOUT      = 30 * time.Second
+	DIALER_KEEP_ALIVE   = 30 * time.Second
 )
 
 var (
 	// httpClient used for fetching remote articles with timeouts and redirect policy
 	httpClient = &http.Client{
 		Transport: &http.Transport{
-			DialContext: newSafeDialer().DialContext,
+			DialContext: NewSafeDialer().DialContext,
 		},
-		Timeout: httpClientTimeout,
+		Timeout: HTTP_CLIENT_TIMEOUT,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			if len(via) >= maxRedirects {
-				return fmt.Errorf("stopped after %d redirects", maxRedirects)
+			if len(via) >= MAX_REDIRECTS {
+				return fmt.Errorf("stopped after %d redirects", MAX_REDIRECTS)
 			}
 			return nil
 		},
 	}
 )
 
-func newSafeDialer() *net.Dialer {
+func NewSafeDialer() *net.Dialer {
 	dialer := &net.Dialer{
-		Timeout:   dialerTimeout,
-		KeepAlive: dialerKeepAlive,
+		Timeout:   DIALER_TIMEOUT,
+		KeepAlive: DIALER_KEEP_ALIVE,
 		Control: func(network, address string, c syscall.RawConn) error {
 			host, _, err := net.SplitHostPort(address)
 			if err != nil {

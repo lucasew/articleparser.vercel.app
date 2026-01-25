@@ -21,8 +21,8 @@ import (
 )
 
 const (
-	maxBodySize    = int64(2 * 1024 * 1024) // 2 MiB
-	handlerTimeout = 5 * time.Second
+	MAX_BODY_SIZE   = int64(2 * 1024 * 1024) // 2 MiB
+	HANDLER_TIMEOUT = 5 * time.Second
 )
 
 const Template = `
@@ -92,7 +92,7 @@ func fetchAndParse(ctx context.Context, link *url.URL, r *http.Request) (readabi
 	defer res.Body.Close()
 
 	// limit body size to prevent OOM
-	reader := io.LimitReader(res.Body, maxBodySize)
+	reader := io.LimitReader(res.Body, MAX_BODY_SIZE)
 	node, err := html.Parse(reader)
 	if err != nil {
 		return readability.Article{}, err
@@ -290,7 +290,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), handlerTimeout)
+	ctx, cancel := context.WithTimeout(r.Context(), HANDLER_TIMEOUT)
 	defer cancel()
 
 	article, err := fetchAndParse(ctx, link, r)
