@@ -1,3 +1,10 @@
+/**
+ * Package handler implements the Vercel Serverless Function entrypoint.
+ * It handles URL parsing, fetching, readability parsing, and formatting logic for the reader application.
+ *
+ * It is designed to be deployed as a serverless function, handling requests to process
+ * and clean up web articles for easier reading or LLM consumption.
+ */
 package handler
 
 import (
@@ -65,6 +72,17 @@ var (
 	}
 )
 
+/**
+ * newSafeDialer creates a custom net.Dialer that prevents Server-Side Request Forgery (SSRF).
+ *
+ * It validates the resolved IP address before connecting, ensuring that it is not:
+ * - A private network address (e.g., 192.168.x.x, 10.x.x.x)
+ * - A loopback address (e.g., 127.0.0.1)
+ * - An unspecified address (e.g., 0.0.0.0)
+ *
+ * This is critical for preventing the application from accessing internal services or metadata services
+ * (like AWS EC2 metadata) running on the same network.
+ */
 func newSafeDialer() *net.Dialer {
 	dialer := &net.Dialer{
 		Timeout:   dialerTimeout,
@@ -89,6 +107,13 @@ func newSafeDialer() *net.Dialer {
 	return dialer
 }
 
+/**
+ * userAgentPool contains a list of real browser User-Agent strings.
+ *
+ * We rotate through these to mimic legitimate traffic, as many websites block requests
+ * from default HTTP clients (like Go-http-client) or known bot User-Agents.
+ * This list requires periodic maintenance to stay current with browser versions.
+ */
 var userAgentPool = []string{
 	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0",
 	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
@@ -101,6 +126,16 @@ func getRandomUserAgent() string {
 	return userAgentPool[rand.Intn(len(userAgentPool))]
 }
 
+/**
+ * fetchAndParse retrieves the content from the target URL and parses it using the readability library.
+ *
+ * Key behaviors:
+ * - Spoofs User-Agent and other browser headers to avoid blocking.
+ * - Forwards Accept-Language from the client to respect language preferences.
+ * - Sets security headers (Sec-Fetch-*) to look like a navigation request.
+ * - Limits the response body size to maxBodySize to prevent Out-Of-Memory (OOM) crashes on large pages.
+ * - Uses a custom httpClient with SSRF protection.
+ */
 func fetchAndParse(ctx context.Context, link *url.URL, r *http.Request) (readability.Article, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", link.String(), nil)
 	if err != nil {
@@ -144,6 +179,15 @@ func fetchAndParse(ctx context.Context, link *url.URL, r *http.Request) (readabi
 	return ReadabilityParser.ParseDocument(node, link)
 }
 
+/**
+ * normalizeAndValidateURL cleans and validates the user-provided URL.
+ *
+ * It handles common normalization issues, such as:
+ * - Missing scheme (defaults to https://).
+ * - Malformed schemes caused by some proxies (e.g., http:/example.com -> http://example.com).
+ *
+ * It also restricts the scheme to 'http' or 'https' to prevent usage of other protocols like 'file://' or 'gopher://'.
+ */
 func normalizeAndValidateURL(rawLink string) (*url.URL, error) {
 	if rawLink == "" {
 		return nil, errors.New("url parameter is empty")
@@ -172,6 +216,15 @@ func normalizeAndValidateURL(rawLink string) (*url.URL, error) {
 	return link, nil
 }
 
+/**
+ * securityHeadersMiddleware applies a baseline of security headers to every response.
+ *
+ * Headers set:
+ * - Content-Security-Policy: Restricts sources for scripts, styles, and other content to prevent XSS.
+ * - X-Content-Type-Options: Prevents MIME-sniffing.
+ * - X-Frame-Options: Prevents clickjacking by denying framing.
+ * - Referrer-Policy: Controls how much referrer information is sent.
+ */
 func securityHeadersMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self' https://bookmarklet-theme.vercel.app; style-src 'self' https://unpkg.com;")
@@ -182,7 +235,10 @@ func securityHeadersMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// Handler is the main entrypoint, we wrap it with security middleware
+/**
+ * Handler is the main entry point for the serverless function.
+ * It wraps the core logic with security middleware.
+ */
 func Handler(w http.ResponseWriter, r *http.Request) {
 	securityHeadersMiddleware(http.HandlerFunc(handler)).ServeHTTP(w, r)
 }
@@ -190,6 +246,10 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 // formatHandler defines the function signature for handling different output formats.
 type formatHandler func(w http.ResponseWriter, article readability.Article, buf *bytes.Buffer)
 
+/**
+ * formatHTML renders the article using the standard HTML template.
+ * This is the default view for human consumption.
+ */
 func formatHTML(w http.ResponseWriter, article readability.Article, contentBuf *bytes.Buffer) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	// inject safe HTML content
@@ -206,11 +266,19 @@ func formatHTML(w http.ResponseWriter, article readability.Article, contentBuf *
 	}
 }
 
+/**
+ * formatMarkdown converts the article content to Markdown.
+ * Useful for LLMs or note-taking applications.
+ */
 func formatMarkdown(w http.ResponseWriter, _ readability.Article, buf *bytes.Buffer) {
 	w.Header().Set("Content-Type", "text/markdown")
 	godown.Convert(w, buf, nil)
 }
 
+/**
+ * formatJSON returns the raw title and HTML content in a JSON object.
+ * Useful for programmatic consumption where the client wants to handle rendering.
+ */
 func formatJSON(w http.ResponseWriter, article readability.Article, buf *bytes.Buffer) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
@@ -219,6 +287,9 @@ func formatJSON(w http.ResponseWriter, article readability.Article, buf *bytes.B
 	})
 }
 
+/**
+ * formatText returns the plain text content, stripped of HTML tags.
+ */
 func formatText(w http.ResponseWriter, _ readability.Article, buf *bytes.Buffer) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.Write([]byte(buf.String()))
@@ -233,7 +304,12 @@ var formatters = map[string]formatHandler{
 	"txt":      formatText,
 }
 
-// isLLM attempts to detect if the request is coming from an LLM or a tool used by one.
+/**
+ * isLLM attempts to detect if the request is originated from a known LLM crawler or tool.
+ *
+ * It checks the User-Agent string against a list of known identifiers (e.g., GPTBot, Claude).
+ * This allows the application to default to a machine-friendly format (Markdown) automatically.
+ */
 func isLLM(r *http.Request) bool {
 	ua := strings.ToLower(r.UserAgent())
 	llmStrings := []string{
@@ -255,7 +331,15 @@ func isLLM(r *http.Request) bool {
 	return false
 }
 
-// getFormat determines the output format from the request, defaulting to "html".
+/**
+ * getFormat determines the desired output format based on request signals.
+ *
+ * Priority order:
+ * 1. Query parameter 'format' (explicit override).
+ * 2. Accept Header (content negotiation).
+ * 3. LLM Detection (auto-switch to Markdown for bots).
+ * 4. Default to 'html'.
+ */
 func getFormat(r *http.Request) string {
 	// 1. Priority: Query parameter
 	format := r.URL.Query().Get("format")
@@ -286,8 +370,14 @@ func getFormat(r *http.Request) string {
 	return "html"
 }
 
-// reconstructTargetURL handles cases where query parameters meant for the target URL
-// are interpreted as parameters for the API itself (e.g. due to Vercel rewrites).
+/**
+ * reconstructTargetURL handles query parameter extraction quirks caused by Vercel rewrites.
+ *
+ * When Vercel rewrites a path like `/api/extract?url=http://example.com?foo=bar`,
+ * the `url` query parameter might be cleanly separated from `foo=bar`.
+ * This function merges stray query parameters back into the target URL to ensure
+ * the full original URL is processed.
+ */
 func reconstructTargetURL(r *http.Request) string {
 	rawLink := r.URL.Query().Get("url")
 	if rawLink == "" {
