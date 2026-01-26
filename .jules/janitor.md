@@ -13,3 +13,8 @@
 **Root Cause:** The logic for handling Vercel's query parameter splitting was implemented inline within the main handler, increasing its cognitive load and complexity.
 **Solution:** I extracted the URL reconstruction logic into a dedicated helper function `reconstructTargetURL`. This adheres to the Single Responsibility Principle and makes the main handler cleaner and easier to read.
 **Pattern:** Extract complex, self-contained logic blocks from main handlers into helper functions to improve readability and testability.
+## 2026-01-26 - Extract LLM user agents to package variable
+**Issue:** The `isLLM` function contained a hardcoded list of user agent substrings, mixing configuration data with logic.
+**Root Cause:** The list of LLM identifiers was defined inside the function scope.
+**Solution:** I extracted the list into a package-level variable `llmUserAgents`.
+**Pattern:** Separate configuration data (like lists of magic strings) from business logic to improve readability and maintainability.

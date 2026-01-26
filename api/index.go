@@ -122,6 +122,18 @@ var userAgentPool = []string{
 	"Mozilla/5.0 (iPhone; CPU iPhone OS 18_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1",
 }
 
+var llmUserAgents = []string{
+	"gptbot",
+	"chatgpt",
+	"claude",
+	"googlebot",
+	"bingbot",
+	"anthropic",
+	"perplexity",
+	"claudebot",
+	"github-copilot",
+}
+
 func getRandomUserAgent() string {
 	return userAgentPool[rand.Intn(len(userAgentPool))]
 }
@@ -312,18 +324,7 @@ var formatters = map[string]formatHandler{
  */
 func isLLM(r *http.Request) bool {
 	ua := strings.ToLower(r.UserAgent())
-	llmStrings := []string{
-		"gptbot",
-		"chatgpt",
-		"claude",
-		"googlebot",
-		"bingbot",
-		"anthropic",
-		"perplexity",
-		"claudebot",
-		"github-copilot",
-	}
-	for _, s := range llmStrings {
+	for _, s := range llmUserAgents {
 		if strings.Contains(ua, s) {
 			return true
 		}
