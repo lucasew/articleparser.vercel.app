@@ -45,7 +45,9 @@ func TestFetchAndParse(t *testing.T) {
 	// Serve a minimal HTML page
 	htmlBody := `<html><head><title>Test Title</title></head><body><p>Hello World</p></body></html>`
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(htmlBody))
+		if _, err := w.Write([]byte(htmlBody)); err != nil {
+			t.Errorf("failed to write response: %v", err)
+		}
 	}))
 	defer srv.Close()
 
