@@ -1,6 +1,27 @@
 [tools]
 bun = "1.3.6"
 go = "1.25.6"
+golangci-lint = "1.64.6"
 
 [tasks.dev]
 run = "bunx vercel dev"
+
+[tasks.install]
+run = "go mod download"
+description = "Install dependencies"
+
+[tasks.test]
+run = "go test ./..."
+description = "Run tests"
+
+[tasks.lint]
+depends = ["lint:go"]
+description = "Run all linters"
+
+[tasks."lint:go"]
+run = "golangci-lint run"
+description = "Run Go linter"
+
+[tasks.ci]
+depends = ["install", "lint", "test"]
+description = "Run CI pipeline"
