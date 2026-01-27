@@ -63,12 +63,12 @@ func TestReconstructTargetURL(t *testing.T) {
 			gotU, _ := url.Parse(got)
 			expU, _ := url.Parse(tt.expected)
 
-            if gotU == nil || expU == nil {
-                if got != tt.expected {
-                     t.Errorf("reconstructTargetURL() = %v, want %v", got, tt.expected)
-                }
-                return
-            }
+			if gotU == nil || expU == nil {
+				if got != tt.expected {
+					t.Errorf("reconstructTargetURL() = %v, want %v", got, tt.expected)
+				}
+				return
+			}
 
 			if gotU.Scheme != expU.Scheme || gotU.Host != expU.Host || gotU.Path != expU.Path {
 				t.Errorf("reconstructTargetURL() base mismatch = %v, want %v", got, tt.expected)
