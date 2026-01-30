@@ -1,0 +1,7 @@
+{
+  "name": "article-parser",
+  "private": true,
+  "devDependencies": {
+    "prettier": "latest"
+  }
+}

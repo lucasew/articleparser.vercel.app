@@ -7,20 +7,48 @@ golangci-lint = "1.64.8"
 run = "bunx vercel dev"
 
 [tasks.install]
-run = "go mod download"
+depends = ["install:*"]
 description = "Install dependencies"
+
+[tasks."install:go"]
+run = "go mod download"
+description = "Install Go dependencies"
+
+[tasks."install:bun"]
+run = "bun install"
+description = "Install Bun dependencies"
 
 [tasks.test]
 run = "go test ./..."
 description = "Run tests"
 
 [tasks.lint]
-depends = ["lint:go"]
+depends = ["lint:*"]
 description = "Run all linters"
 
 [tasks."lint:go"]
 run = "golangci-lint run"
 description = "Run Go linter"
+
+[tasks."lint:prettier"]
+run = "bunx prettier --check ."
+description = "Lint with Prettier"
+
+[tasks.fmt]
+depends = ["fmt:*"]
+description = "Format all files"
+
+[tasks."fmt:go"]
+run = "golangci-lint run --fix"
+description = "Format Go files"
+
+[tasks."fmt:prettier"]
+run = "bunx prettier --write ."
+description = "Format with Prettier"
+
+[tasks.codegen]
+run = "echo 'No codegen tasks'"
+description = "Run code generation"
 
 [tasks.ci]
 depends = ["install", "lint", "test"]

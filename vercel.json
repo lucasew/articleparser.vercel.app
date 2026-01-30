@@ -1,8 +1,11 @@
 {
   "rewrites": [
-    {"source": "/api/:format/:url*", "destination": "/api"},
-    {"source": "/:format(md|markdown|json|html|text|txt)/:url(https?:/.*)", "destination": "/api?format=:format&url=:url"},
-    {"source": "/:url(https?:/.*)", "destination": "/api?url=:url"}
+    { "source": "/api/:format/:url*", "destination": "/api" },
+    {
+      "source": "/:format(md|markdown|json|html|text|txt)/:url(https?:/.*)",
+      "destination": "/api?format=:format&url=:url"
+    },
+    { "source": "/:url(https?:/.*)", "destination": "/api?url=:url" }
   ],
   "trailingSlash": false
 }

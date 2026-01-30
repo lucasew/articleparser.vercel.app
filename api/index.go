@@ -63,7 +63,7 @@ var (
 			DialContext: newSafeDialer().DialContext,
 		},
 		Timeout: httpClientTimeout,
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+		CheckRedirect: func(_ *http.Request, via []*http.Request) error {
 			if len(via) >= maxRedirects {
 				return fmt.Errorf("stopped after %d redirects", maxRedirects)
 			}
@@ -87,7 +87,7 @@ func newSafeDialer() *net.Dialer {
 	dialer := &net.Dialer{
 		Timeout:   dialerTimeout,
 		KeepAlive: dialerKeepAlive,
-		Control: func(network, address string, c syscall.RawConn) error {
+		Control: func(_, address string, _ syscall.RawConn) error {
 			host, _, err := net.SplitHostPort(address)
 			if err != nil {
 				return err
