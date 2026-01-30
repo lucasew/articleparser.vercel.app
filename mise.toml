@@ -7,8 +7,16 @@ golangci-lint = "1.64.8"
 run = "bunx vercel dev"
 
 [tasks.install]
-run = "go mod download && bun install"
+depends = ["install:*"]
 description = "Install dependencies"
+
+[tasks."install:go"]
+run = "go mod download"
+description = "Install Go dependencies"
+
+[tasks."install:bun"]
+run = "bun install"
+description = "Install Bun dependencies"
 
 [tasks.test]
 run = "go test ./..."
