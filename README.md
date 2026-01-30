@@ -5,6 +5,7 @@ Available at: https://articleparser.vercel.app/
 It's a simple site that you give a URL and it gives you the article content of the URL.
 
 This project is basically a duct tape of the following projects:
+
 - [Go Readability](https://github.com/go-shiori/go-readability): The actual article parser.
 - [godown](https://github.com/mattn/godown): Converter from HTML to Markdown. Used for Markdown output.
 - Golang Standard library to fetch stuff.

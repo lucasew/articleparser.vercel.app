@@ -1,69 +1,71 @@
 <!doctype html>
 <html lang="en">
-    <head>
-        <!-- IMPROV: Added character set and viewport meta tags for better compatibility -->
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Article Parser</title>
-        <!-- IMPROV: Added a more descriptive title attribute for accessibility -->
-        <link
-            id="theme"
-            rel="stylesheet"
-            href="https://unpkg.com/sakura.css/css/sakura.css"
-        />
-        <script defer src="https://analytics.app.lew.tec.br/script.js"
-        data-website-id="1478aa23-e958-4991-87d7-0f58309d28ba"></script>
-    </head>
-    <body>
-        <script src="https://bookmarklet-theme.vercel.app/script.js"></script>
+  <head>
+    <!-- IMPROV: Added character set and viewport meta tags for better compatibility -->
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Article Parser</title>
+    <!-- IMPROV: Added a more descriptive title attribute for accessibility -->
+    <link
+      id="theme"
+      rel="stylesheet"
+      href="https://unpkg.com/sakura.css/css/sakura.css"
+    />
+    <script
+      defer
+      src="https://analytics.app.lew.tec.br/script.js"
+      data-website-id="1478aa23-e958-4991-87d7-0f58309d28ba"
+    ></script>
+  </head>
+  <body>
+    <script src="https://bookmarklet-theme.vercel.app/script.js"></script>
 
-        <h1>Article Parser</h1>
-        <!-- IMPROV: Added a short description for better SEO and accessibility -->
-        <p>
-            Article Parser is a tool to declutter articles. Made by
-            <a href="https://github.com/lucasew/">lucasew</a> using
-            <a href="https://github.com/go-shiori/go-readability"
-                >go-readability</a
-            >
-            and <a href="https://oxal.org/projects/sakura/">sakura.css</a>.
-        </p>
+    <h1>Article Parser</h1>
+    <!-- IMPROV: Added a short description for better SEO and accessibility -->
+    <p>
+      Article Parser is a tool to declutter articles. Made by
+      <a href="https://github.com/lucasew/">lucasew</a> using
+      <a href="https://github.com/go-shiori/go-readability">go-readability</a>
+      and <a href="https://oxal.org/projects/sakura/">sakura.css</a>.
+    </p>
 
-        <!-- IMPROV: Improved form input placeholder for clarity -->
-        <form action="/api">
-            <label for="url">URL:</label>
-            <input
-                type="text"
-                name="url"
-                id="url"
-                value=""
-                placeholder="Enter article URL here..."
-            />
-            <button type="submit">Declutter</button>
-        </form>
+    <!-- IMPROV: Improved form input placeholder for clarity -->
+    <form action="/api">
+      <label for="url">URL:</label>
+      <input
+        type="text"
+        name="url"
+        id="url"
+        value=""
+        placeholder="Enter article URL here..."
+      />
+      <button type="submit">Declutter</button>
+    </form>
 
-        <!-- LLM Usage Section -->
-        <hr />
-        <h3>LLM Friendly</h3>
-        <p>
-            You can use this tool directly in your LLM prompts by prefixing any URL:
-        </p>
-        <pre><code>https://articleparser.vercel.app/https://example.com/article</code></pre>
-        <p>
-            It will automatically return <strong>Markdown</strong> when accessed by LLMs or when specified:
-        </p>
-        <ul>
-            <li><code>/md/https://...</code> - Markdown</li>
-            <li><code>/txt/https://...</code> - Plain Text</li>
-            <li><code>/json/https://...</code> - JSON</li>
-        </ul>
+    <!-- LLM Usage Section -->
+    <hr />
+    <h3>LLM Friendly</h3>
+    <p>
+      You can use this tool directly in your LLM prompts by prefixing any URL:
+    </p>
+    <pre><code>https://articleparser.vercel.app/https://example.com/article</code></pre>
+    <p>
+      It will automatically return <strong>Markdown</strong> when accessed by
+      LLMs or when specified:
+    </p>
+    <ul>
+      <li><code>/md/https://...</code> - Markdown</li>
+      <li><code>/txt/https://...</code> - Plain Text</li>
+      <li><code>/json/https://...</code> - JSON</li>
+    </ul>
 
-        <!-- IMPROV: Improved bookmarklet text for clarity -->
-        <p>
-            Or use the
-            <a
-                href="javascript: (function(){window.open('https://articleparser.vercel.app/api?url=' + encodeURI(window.location.href), '_blank')})();"
-                >bookmarklet</a
-            >.
-        </p>
-    </body>
+    <!-- IMPROV: Improved bookmarklet text for clarity -->
+    <p>
+      Or use the
+      <a
+        href="javascript: (function(){window.open('https://articleparser.vercel.app/api?url=' + encodeURI(window.location.href), '_blank')})();"
+        >bookmarklet</a
+      >.
+    </p>
+  </body>
 </html>

@@ -1,9 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended",
-    "github>lewtec/renovate-config:base"
-  ],
+  "extends": ["config:recommended", "github>lewtec/renovate-config:base"],
   "lockFileMaintenance": {
     "automerge": true,
     "automergeType": "pr",
@@ -13,9 +10,7 @@
   "packageRules": [
     {
       "automerge": true,
-      "matchUpdateTypes": [
-        "patch"
-      ]
+      "matchUpdateTypes": ["patch"]
     }
   ]
 }
