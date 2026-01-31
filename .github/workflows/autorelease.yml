@@ -49,3 +49,14 @@ jobs:
       - name: CI
         if: steps.git-check.outputs.changes != 'true'
         run: mise run ci
+
+      - name: Release
+        if: steps.git-check.outputs.changes != 'true' && startsWith(github.ref, 'refs/tags/v')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create ${{ github.ref_name }} --generate-notes
+
+      - name: Artifacts
+        if: steps.git-check.outputs.changes != 'true' && startsWith(github.ref, 'refs/tags/v')
+        run: echo "No build artifacts to upload."
