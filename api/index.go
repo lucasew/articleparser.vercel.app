@@ -38,6 +38,11 @@ const (
 	handlerTimeout    = 5 * time.Second
 )
 
+/**
+ * Template defines the HTML structure for the reader view.
+ * It uses a minimal CSS framework (Sakura) to ensure readability across devices.
+ * The script.js injection provides bookmarklet functionality.
+ */
 const Template = `
 <!DOCTYPE html>
 <html>
@@ -55,9 +60,26 @@ const Template = `
 `
 
 var (
-	DefaultTemplate   = template.Must(template.New("article").Parse(Template))
+	/**
+	 * DefaultTemplate is the parsed HTML template instance used for rendering the reader view.
+	 * It is parsed once at startup to improve performance.
+	 */
+	DefaultTemplate = template.Must(template.New("article").Parse(Template))
+
+	/**
+	 * ReadabilityParser is the shared parser instance from the go-readability library.
+	 * It is reused across requests to avoid reallocation overhead.
+	 */
 	ReadabilityParser = readability.NewParser()
-	// httpClient used for fetching remote articles with timeouts and redirect policy
+
+	/**
+	 * httpClient is the shared HTTP client used for fetching remote articles.
+	 *
+	 * It is configured with:
+	 * - A custom dialer (newSafeDialer) to prevent SSRF attacks.
+	 * - A strict timeout to prevent hanging on slow servers.
+	 * - A redirect policy that limits the number of redirects to avoid loops.
+	 */
 	httpClient = &http.Client{
 		Transport: &http.Transport{
 			DialContext: newSafeDialer().DialContext,
@@ -122,6 +144,12 @@ var userAgentPool = []string{
 	"Mozilla/5.0 (iPhone; CPU iPhone OS 18_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1",
 }
 
+/**
+ * llmUserAgents is a list of known User-Agent substrings used by Large Language Models (LLMs) and their crawlers.
+ *
+ * These strings are used in `isLLM` to detect if the request is coming from an AI agent,
+ * allowing the application to serve a more machine-friendly format (Markdown) by default.
+ */
 var llmUserAgents = []string{
 	"gptbot",
 	"chatgpt",
@@ -134,6 +162,12 @@ var llmUserAgents = []string{
 	"github-copilot",
 }
 
+/**
+ * getRandomUserAgent selects a random User-Agent string from the `userAgentPool`.
+ *
+ * Randomization helps in distributing the request fingerprint, making it harder for
+ * target servers to identify and block the scraper based on a static UA string.
+ */
 func getRandomUserAgent() string {
 	return userAgentPool[rand.Intn(len(userAgentPool))]
 }
@@ -313,6 +347,10 @@ func formatText(w http.ResponseWriter, _ readability.Article, buf *bytes.Buffer)
 	}
 }
 
+/**
+ * formatters maps format identifiers (e.g., "html", "md") to their corresponding handler functions.
+ * This allows for easy extensibility and clean selection logic in the main handler.
+ */
 var formatters = map[string]formatHandler{
 	"html":     formatHTML,
 	"md":       formatMarkdown,
@@ -416,7 +454,17 @@ func reconstructTargetURL(r *http.Request) string {
 	return rawLink
 }
 
-// handler is the actual logic
+/**
+ * handler orchestrates the main request processing flow.
+ *
+ * Steps:
+ * 1. Reconstructs the target URL (handling Vercel quirks).
+ * 2. Determines the requested output format.
+ * 3. Validates and normalizes the URL.
+ * 4. Fetches and parses the content (with timeout).
+ * 5. Renders the content to the selected format.
+ * 6. Handles errors by returning JSON error responses.
+ */
 func handler(w http.ResponseWriter, r *http.Request) {
 	rawLink := reconstructTargetURL(r)
 
@@ -454,7 +502,10 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	formatter(w, article, contentBuf)
 }
 
-// writeError writes a JSON error message with given status
+/**
+ * writeError sends a JSON response with the specified status code and error message.
+ * It ensures consistent error reporting across the API.
+ */
 func writeError(w http.ResponseWriter, status int, msg string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
