@@ -81,6 +81,13 @@ func TestFetchAndParse(t *testing.T) {
 	}
 }
 
+/**
+ * TestSSRFProtection confirms that the custom dialer correctly blocks connections
+ * to private and loopback IP addresses.
+ *
+ * This is a critical security control to prevent the application from being used
+ * as a proxy to attack internal infrastructure (SSRF).
+ */
 func TestSSRFProtection(t *testing.T) {
 	// a dummy server that should never be reached
 	srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
