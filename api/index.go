@@ -38,6 +38,13 @@ const (
 	handlerTimeout    = 5 * time.Second
 )
 
+/**
+ * Template is the raw HTML template string used for rendering the article.
+ *
+ * It provides a minimal HTML5 structure and includes the Sakura CSS library
+ * for a clean, typography-focused reading experience without distractions.
+ * The template expects a struct with Title and Content fields.
+ */
 const Template = `
 <!DOCTYPE html>
 <html>
@@ -55,8 +62,22 @@ const Template = `
 `
 
 var (
-	DefaultTemplate   = template.Must(template.New("article").Parse(Template))
+	/**
+	 * DefaultTemplate is the parsed Go template instance.
+	 *
+	 * It is initialized at startup to avoid the overhead of parsing the template
+	 * on every request, ensuring faster response times.
+	 */
+	DefaultTemplate = template.Must(template.New("article").Parse(Template))
+
+	/**
+	 * ReadabilityParser is the shared instance of the readability parser.
+	 *
+	 * It is reusable and thread-safe, allowing concurrent processing of multiple
+	 * requests without the need to create new parser instances.
+	 */
 	ReadabilityParser = readability.NewParser()
+
 	// httpClient used for fetching remote articles with timeouts and redirect policy
 	httpClient = &http.Client{
 		Transport: &http.Transport{
@@ -122,6 +143,13 @@ var userAgentPool = []string{
 	"Mozilla/5.0 (iPhone; CPU iPhone OS 18_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1",
 }
 
+/**
+ * llmUserAgents contains a list of substring identifiers for known LLM bots and crawlers.
+ *
+ * This list is used to detect requests from AI agents (like GPTBot, Claude, etc.)
+ * so the application can automatically serve a token-efficient format (Markdown)
+ * instead of full HTML.
+ */
 var llmUserAgents = []string{
 	"gptbot",
 	"chatgpt",
@@ -134,6 +162,12 @@ var llmUserAgents = []string{
 	"github-copilot",
 }
 
+/**
+ * getRandomUserAgent returns a random User-Agent string from the pool.
+ *
+ * Rotating User-Agents helps to evade simple anti-bot measures that block requests
+ * based on static or default Go HTTP client User-Agents.
+ */
 func getRandomUserAgent() string {
 	return userAgentPool[rand.Intn(len(userAgentPool))]
 }
@@ -313,6 +347,12 @@ func formatText(w http.ResponseWriter, _ readability.Article, buf *bytes.Buffer)
 	}
 }
 
+/**
+ * formatters maps format names (including aliases) to their respective handler functions.
+ *
+ * This design allows for easy extensibility of output formats. New formats can be
+ * added by implementing a formatHandler and registering it here.
+ */
 var formatters = map[string]formatHandler{
 	"html":     formatHTML,
 	"md":       formatMarkdown,
@@ -454,7 +494,12 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	formatter(w, article, contentBuf)
 }
 
-// writeError writes a JSON error message with given status
+/**
+ * writeError writes a structured JSON error response.
+ *
+ * It enforces a consistent error format {"error": "message"} across the API
+ * and sets the correct HTTP status code and Content-Type header.
+ */
 func writeError(w http.ResponseWriter, status int, msg string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)

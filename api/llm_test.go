@@ -6,6 +6,13 @@ import (
 	"testing"
 )
 
+/**
+ * TestIsLLM verifies the detection of Large Language Model (LLM) bots.
+ *
+ * This ensures that when an LLM (like GPTBot) accesses the service, it
+ * automatically receives Markdown content, which is more token-efficient
+ * and easier for the model to process than full HTML.
+ */
 func TestIsLLM(t *testing.T) {
 	tests := []struct {
 		ua   string
