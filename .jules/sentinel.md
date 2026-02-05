@@ -13,3 +13,11 @@
 **Learning:** `ip.IsPrivate()` and `ip.IsLoopback()` are not sufficient to block all local traffic. The concept of "Unspecified" addresses (all zeros) must also be explicitly handled when validating IPs for SSRF protection in Go.
 
 **Prevention:** When implementing a safe dialer to prevent SSRF, always include `ip.IsUnspecified()` in the list of blocked IP characteristics, in addition to private, loopback, and link-local addresses.
+
+## 2026-01-27 - Fix Stored XSS in HTML Output
+
+**Vulnerability:** The application was vulnerable to Stored Cross-Site Scripting (XSS) because it rendered HTML content from the `go-readability` library without adequate sanitization. Although `go-readability` performs some cleaning, it does not guarantee safety against all XSS vectors (e.g., `onerror` handlers).
+
+**Learning:** Relying solely on a parsing library for security is insufficient. Libraries designed for content extraction (like `readability`) often prioritize preserving content structure over strict security sanitization. A dedicated sanitizer is required before rendering user-controlled HTML.
+
+**Prevention:** We integrated `bluemonday` with `UGCPolicy` to explicitly sanitize the HTML content before it is injected into the HTML template or JSON response. This ensures that any malicious tags or attributes missed by the parser are stripped.
