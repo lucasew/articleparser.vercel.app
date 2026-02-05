@@ -7,6 +7,18 @@ import (
 	"testing"
 )
 
+/**
+ * TestReconstructTargetURL verifies the logic for reassembling URLs that have been
+ * split by Vercel's rewrite rules.
+ *
+ * When Vercel rewrites a request like `/api?url=http://example.com?foo=bar`,
+ * it parses the query string *before* passing it to the Go handler. This often
+ * results in `url=http://example.com` and `foo=bar` being treated as separate
+ * parameters, rather than `foo=bar` being part of the `url` value.
+ *
+ * The reconstruction logic detects these "stray" parameters and merges them
+ * back into the target URL to ensure the fetcher requests the correct resource.
+ */
 func TestReconstructTargetURL(t *testing.T) {
 	tests := []struct {
 		name     string
