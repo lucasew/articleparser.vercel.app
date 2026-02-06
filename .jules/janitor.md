@@ -25,3 +25,4 @@
 **Root Cause:** The list of LLM identifiers was defined inside the function scope.
 **Solution:** I extracted the list into a package-level variable `llmUserAgents`.
 **Pattern:** Separate configuration data (like lists of magic strings) from business logic to improve readability and maintainability.
+- 2025-02-18: Remove redundant tests that validate copy-pasted logic instead of the actual function.

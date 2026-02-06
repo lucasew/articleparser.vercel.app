@@ -2,7 +2,6 @@ package handler
 
 import (
 	"net/http/httptest"
-	"net/url"
 	"testing"
 )
 
@@ -29,35 +28,6 @@ func TestIsLLM(t *testing.T) {
 		if got := isLLM(req); got != tt.want {
 			t.Errorf("isLLM(UA=%q) = %v; want %v", tt.ua, tt.want, got)
 		}
-	}
-}
-
-func TestURLReconstruction(t *testing.T) {
-	// Simulate Vercel rewrite: /https://example.com/search?q=foo -> /api?url=https://example.com/search&q=foo
-	req := httptest.NewRequest("GET", "/api?url=https://example.com/search&q=foo&format=md", nil)
-
-	rawLink := req.URL.Query().Get("url")
-	// Replicate logic from handler
-	u, err := url.Parse(rawLink)
-	if err != nil {
-		t.Fatalf("failed to parse rawLink: %v", err)
-	}
-	targetQuery := u.Query()
-	originalQuery := req.URL.Query()
-	for k, vs := range originalQuery {
-		if k == "url" || k == "format" {
-			continue
-		}
-		for _, v := range vs {
-			targetQuery.Add(k, v)
-		}
-	}
-	u.RawQuery = targetQuery.Encode()
-	got := u.String()
-
-	want := "https://example.com/search?q=foo"
-	if got != want {
-		t.Errorf("URL reconstruction failed. got %q; want %q", got, want)
 	}
 }
 
