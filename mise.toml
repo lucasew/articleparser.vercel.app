@@ -1,7 +1,6 @@
 [tools]
 bun = "1.3.8"
 go = "1.25.7"
-golangci-lint = "1.64.8"
 
 [tasks.dev]
 run = "bunx vercel dev"
@@ -27,7 +26,7 @@ depends = ["lint:*"]
 description = "Run all linters"
 
 [tasks."lint:go"]
-run = "golangci-lint run"
+run = "go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8 run"
 description = "Run Go linter"
 
 [tasks."lint:prettier"]
@@ -39,7 +38,7 @@ depends = ["fmt:*"]
 description = "Format all files"
 
 [tasks."fmt:go"]
-run = "golangci-lint run --fix"
+run = "go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8 run --fix"
 description = "Format Go files"
 
 [tasks."fmt:prettier"]
