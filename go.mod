@@ -1,6 +1,6 @@
 module github.com/lucasew/readability-web
 
-go 1.24.7
+go 1.25.7
 
 require (
 	codeberg.org/readeck/go-readability/v2 v2.1.0
