@@ -499,7 +499,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	// Sanitize the HTML content to prevent XSS
 	sanitized := htmlSanitizer.SanitizeBytes(contentBuf.Bytes())
 	contentBuf.Reset()
-	contentBuf.Write(sanitized)
+	_, _ = contentBuf.Write(sanitized)
 
 	formatter, found := formatters[format]
 	if !found {

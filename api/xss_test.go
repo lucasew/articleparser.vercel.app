@@ -19,7 +19,7 @@ func TestXSSPrevention(t *testing.T) {
 	// 1. Setup malicious server
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
-		fmt.Fprintln(w, `
+		_, _ = fmt.Fprintln(w, `
 			<html>
 				<body>
 					<article>
