@@ -26,6 +26,7 @@ import (
 
 	"codeberg.org/readeck/go-readability/v2"
 	"github.com/mattn/godown"
+	"github.com/microcosm-cc/bluemonday"
 	"golang.org/x/net/html"
 )
 
@@ -77,6 +78,15 @@ var (
 	 * requests without the need to create new parser instances.
 	 */
 	ReadabilityParser = readability.NewParser()
+
+	/**
+	 * htmlSanitizer is the shared instance of the HTML sanitizer policy.
+	 *
+	 * We use the UGCPolicy (User Generated Content) to sanitize HTML content
+	 * returned by the readability parser. This strips dangerous tags (like <script>, <object>)
+	 * and attributes (like onerror, javascript:) to prevent XSS vulnerabilities.
+	 */
+	htmlSanitizer = bluemonday.UGCPolicy()
 
 	// httpClient used for fetching remote articles with timeouts and redirect policy
 	httpClient = &http.Client{
@@ -485,6 +495,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to render article content")
 		return
 	}
+
+	// Sanitize the HTML content to prevent XSS
+	sanitized := htmlSanitizer.SanitizeBytes(contentBuf.Bytes())
+	contentBuf.Reset()
+	contentBuf.Write(sanitized)
 
 	formatter, found := formatters[format]
 	if !found {
