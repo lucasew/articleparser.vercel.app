@@ -23,7 +23,7 @@ func TestInvalidFormatEarlyReturn(t *testing.T) {
 	defer func() { httpClient = originalClient }()
 
 	httpClient = &http.Client{
-		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: roundTripFunc(func(_ *http.Request) (*http.Response, error) {
 			t.Fatal("httpClient.Do called but should have been skipped due to invalid format")
 			return nil, nil
 		}),
@@ -64,7 +64,7 @@ func TestValidFormatLogInjection(t *testing.T) {
 	defer func() { httpClient = originalClient }()
 
 	httpClient = &http.Client{
-		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		Transport: roundTripFunc(func(_ *http.Request) (*http.Response, error) {
 			return &http.Response{
 				StatusCode: 200,
 				Body:       io.NopCloser(strings.NewReader("<html></html>")),
