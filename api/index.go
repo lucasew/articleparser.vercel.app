@@ -461,7 +461,15 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	rawLink := reconstructTargetURL(r)
 
 	format := getFormat(r)
-	log.Printf("request: %s %s", format, rawLink)
+
+	formatter, found := formatters[format]
+	if !found {
+		log.Printf("invalid format request: %q %q", format, rawLink)
+		writeError(w, http.StatusBadRequest, "invalid format")
+		return
+	}
+
+	log.Printf("request: %q %q", format, rawLink)
 
 	link, err := normalizeAndValidateURL(rawLink)
 	if err != nil {
@@ -486,11 +494,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	formatter, found := formatters[format]
-	if !found {
-		writeError(w, http.StatusBadRequest, "invalid format")
-		return
-	}
 	formatter(w, article, contentBuf)
 }
 
