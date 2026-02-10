@@ -18,7 +18,7 @@ func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 func TestInvalidFormatEarlyReturn(t *testing.T) {
-	// Mock httpClient to ensure no request is made
+	// Mock httpClient for testing to ensure no request is made
 	originalClient := httpClient
 	defer func() { httpClient = originalClient }()
 
@@ -59,7 +59,7 @@ func TestInvalidFormatEarlyReturn(t *testing.T) {
 }
 
 func TestValidFormatLogInjection(t *testing.T) {
-	// Mock httpClient to allow fetching
+	// Mock httpClient for testing to allow fetching
 	originalClient := httpClient
 	defer func() { httpClient = originalClient }()
 
