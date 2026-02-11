@@ -22,9 +22,11 @@ func TestXSSPrevention(t *testing.T) {
 		</body>
 		</html>
 	`
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
-		w.Write([]byte(maliciousHTML))
+		if _, err := w.Write([]byte(maliciousHTML)); err != nil {
+			t.Errorf("failed to write response: %v", err)
+		}
 	}))
 	defer srv.Close()
 
@@ -69,11 +71,4 @@ func TestXSSPrevention(t *testing.T) {
 	if !strings.Contains(body, "Normal text") {
 		t.Errorf("Response missing valid content 'Normal text'")
 	}
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
