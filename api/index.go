@@ -101,6 +101,10 @@ var (
  * - A loopback address (e.g., 127.0.0.1)
  * - An unspecified address (e.g., 0.0.0.0)
  *
+ * This validation happens *after* DNS resolution but *before* the connection is established.
+ * This prevents Time-of-Check Time-of-Use (TOCTOU) attacks where a domain could
+ * resolve to a safe IP during check but switch to a private IP during connection.
+ *
  * This is critical for preventing the application from accessing internal services or metadata services
  * (like AWS EC2 metadata) running on the same network.
  */
@@ -267,6 +271,9 @@ func normalizeAndValidateURL(rawLink string) (*url.URL, error) {
  *
  * Headers set:
  * - Content-Security-Policy: Restricts sources for scripts, styles, and other content to prevent XSS.
+ *   - default-src 'self': Only allow content from same origin by default.
+ *   - script-src 'self' ...: Whitelists the bookmarklet script.
+ *   - style-src 'self' ...: Whitelists external CSS for the Sakura theme (unpkg.com).
  * - X-Content-Type-Options: Prevents MIME-sniffing.
  * - X-Frame-Options: Prevents clickjacking by denying framing.
  * - Referrer-Policy: Controls how much referrer information is sent.
@@ -282,14 +289,25 @@ func securityHeadersMiddleware(next http.Handler) http.Handler {
 }
 
 /**
- * Handler is the main entry point for the serverless function.
- * It wraps the core logic with security middleware.
+ * Handler is the Vercel Serverless Function entrypoint.
+ *
+ * It is invoked by Vercel for all matching routes defined in `vercel.json`.
+ * Since Vercel rewrites the path (e.g., `/api/extract` -> `/api/index.go`),
+ * we rely on query parameters (like `url` and `format`) or request headers
+ * to determine the desired action, rather than parsing the request path directly.
  */
 func Handler(w http.ResponseWriter, r *http.Request) {
 	securityHeadersMiddleware(http.HandlerFunc(handler)).ServeHTTP(w, r)
 }
 
-// formatHandler defines the function signature for handling different output formats.
+/**
+ * formatHandler defines the function signature for handling different output formats.
+ *
+ * Implementations are responsible for:
+ * 1. Setting the appropriate Content-Type header.
+ * 2. Encoding the article content (HTML, JSON, Markdown, etc.) into the response writer.
+ * 3. Handling any encoding errors (logging them, as headers are already written).
+ */
 type formatHandler func(w http.ResponseWriter, article readability.Article, buf *bytes.Buffer)
 
 /**
@@ -441,6 +459,9 @@ func reconstructTargetURL(r *http.Request) string {
 	originalQuery := r.URL.Query()
 	hasChanges := false
 	for k, vs := range originalQuery {
+		// Skip 'url' and 'format' as they are control parameters for this API,
+		// not part of the target website's query string.
+		// Including them would cause recursion or invalid target URLs.
 		if k == "url" || k == "format" {
 			continue
 		}
@@ -456,7 +477,17 @@ func reconstructTargetURL(r *http.Request) string {
 	return rawLink
 }
 
-// handler is the actual logic
+/**
+ * handler implements the core request processing pipeline.
+ *
+ * Flow:
+ * 1. Reconstruct Target URL: Merges stray query parameters caused by Vercel rewrites.
+ * 2. Determine Format: checks Query params > Accept header > User-Agent (LLM detection).
+ * 3. Normalize & Validate: Ensures the target URL is valid and uses http/https.
+ * 4. Fetch & Parse: Downloads the page (spoofing a browser) and extracts the main content.
+ * 5. Render: Converts the parsed article to a safe HTML buffer.
+ * 6. Format: Outputs the result in the requested format (HTML, Markdown, JSON, etc.).
+ */
 func handler(w http.ResponseWriter, r *http.Request) {
 	rawLink := reconstructTargetURL(r)
 
