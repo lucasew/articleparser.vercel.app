@@ -26,6 +26,7 @@ import (
 
 	"codeberg.org/readeck/go-readability/v2"
 	"github.com/mattn/godown"
+	"github.com/microcosm-cc/bluemonday"
 	"golang.org/x/net/html"
 )
 
@@ -91,6 +92,15 @@ var (
 			return nil
 		},
 	}
+
+	/**
+	 * htmlSanitizer is the policy used to sanitize HTML content.
+	 *
+	 * We use the UGCPolicy (User Generated Content) which allows a broad range of
+	 * HTML tags suitable for formatted text (like articles) but strips out dangerous
+	 * elements like scripts, iframes, objects, and event handlers (e.g., onclick).
+	 */
+	htmlSanitizer = bluemonday.UGCPolicy()
 )
 
 /**
@@ -516,6 +526,9 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to render article content")
 		return
 	}
+
+	// Sanitize the HTML content to prevent XSS
+	contentBuf = htmlSanitizer.SanitizeReader(contentBuf)
 
 	formatter, found := formatters[format]
 	if !found {
