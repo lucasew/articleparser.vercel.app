@@ -4,7 +4,7 @@ This document contains instructions for AI agents or developers maintaining this
 
 ## User-Agents (Spoofing)
 
-The project uses a pool of User-Agents in `api/index.go` to bypass bot detection.
+The project uses a pool of User-Agents in `api/fetch.go` to bypass bot detection.
 
 **MAINTENANCE TASK:** Periodically check if the User-Agents in `userAgentPool` are becoming outdated. Sites often block versions that are several months old to prevent scraping.
 
