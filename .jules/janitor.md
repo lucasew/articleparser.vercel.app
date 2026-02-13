@@ -3,3 +3,4 @@
 - 2026-01-20: Extract complex, self-contained logic blocks from main handlers into helper functions.
 - 2026-01-26: Separate configuration data (like lists of magic strings) from business logic.
 - 2025-02-18: Remove redundant tests that validate copy-pasted logic instead of the actual function.
+- 2025-02-18: Always explicitly check errors in tests instead of ignoring them with blank identifier.
