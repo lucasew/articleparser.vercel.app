@@ -2,6 +2,8 @@ package handler
 
 import (
 	"context"
+	"errors"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -124,5 +126,35 @@ func TestSSRFProtection(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "refusing to connect to private network address") {
 		t.Errorf("expected error for 0.0.0.0 to contain 'refusing to connect to private network address', but got: %v", err)
+	}
+}
+
+func TestHandler_InvalidFormat_NoFetch(t *testing.T) {
+	// This test ensures that an invalid format fails immediately without attempting to fetch the URL.
+	oldClient := httpClient
+	defer func() { httpClient = oldClient }()
+
+	fetchCalled := false
+	httpClient = &http.Client{
+		Transport: &http.Transport{
+			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
+				fetchCalled = true
+				return nil, errors.New("stopped by test")
+			},
+		},
+	}
+
+	req := httptest.NewRequest("GET", "/api?url=http://example.com&format=invalid_format_123", nil)
+	w := httptest.NewRecorder()
+
+	// Call Handler directly
+	Handler(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Handler returned status %d; want %d", w.Code, http.StatusBadRequest)
+	}
+
+	if fetchCalled {
+		t.Error("Handler attempted to fetch URL despite invalid format")
 	}
 }
