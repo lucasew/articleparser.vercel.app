@@ -5,7 +5,7 @@ go 1.24.7
 require (
 	codeberg.org/readeck/go-readability/v2 v2.1.1
 	github.com/mattn/godown v0.0.1
-	golang.org/x/net v0.48.0
+	golang.org/x/net v0.50.0
 )
 
 require (
@@ -16,5 +16,5 @@ require (
 	github.com/go-shiori/dom v0.0.0-20230515143342-73569d674e1c // indirect
 	github.com/gogs/chardet v0.0.0-20211120154057-b7413eaefb8f // indirect
 	github.com/mattn/go-runewidth v0.0.19 // indirect
-	golang.org/x/text v0.32.0 // indirect
+	golang.org/x/text v0.34.0 // indirect
 )
