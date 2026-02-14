@@ -1,3 +1,4 @@
+# Managed by Arrumador
 name: Autorelease
 on:
   push:
