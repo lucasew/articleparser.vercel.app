@@ -51,5 +51,5 @@ run = "echo 'No codegen tasks'"
 description = "Run code generation"
 
 [tasks.ci]
-depends = ["install", "lint", "test"]
+depends = ["lint", "test"]
 description = "Run CI pipeline"
