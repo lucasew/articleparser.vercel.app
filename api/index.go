@@ -492,7 +492,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	rawLink := reconstructTargetURL(r)
 
 	format := getFormat(r)
-	log.Printf("request: %s %s", format, rawLink)
+	log.Printf("request: %q %q", format, rawLink)
 
 	link, err := normalizeAndValidateURL(rawLink)
 	if err != nil {
