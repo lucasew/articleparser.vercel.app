@@ -26,6 +26,7 @@ import (
 
 	"codeberg.org/readeck/go-readability/v2"
 	"github.com/mattn/godown"
+	"github.com/microcosm-cc/bluemonday"
 	"golang.org/x/net/html"
 )
 
@@ -77,6 +78,15 @@ var (
 	 * requests without the need to create new parser instances.
 	 */
 	ReadabilityParser = readability.NewParser()
+
+	/**
+	 * HTMLSanitizer is the shared instance of the bluemonday HTML sanitizer.
+	 *
+	 * It uses the UGCPolicy to allow common, safe HTML tags and attributes
+	 * while stripping out potentially malicious content like scripts and
+	 * event handlers (e.g., onclick, onerror) to prevent XSS attacks.
+	 */
+	HTMLSanitizer = bluemonday.UGCPolicy()
 
 	// httpClient used for fetching remote articles with timeouts and redirect policy
 	httpClient = &http.Client{
@@ -311,18 +321,28 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 type formatHandler func(w http.ResponseWriter, article readability.Article, buf *bytes.Buffer)
 
 /**
+ * sanitizeHTML strips malicious content from an HTML string.
+ */
+func sanitizeHTML(html string) string {
+	return HTMLSanitizer.Sanitize(html)
+}
+
+/**
  * formatHTML renders the article using the standard HTML template.
  * This is the default view for human consumption.
  */
 func formatHTML(w http.ResponseWriter, article readability.Article, contentBuf *bytes.Buffer) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+	sanitizedContent := sanitizeHTML(contentBuf.String())
+
 	// inject safe HTML content
 	data := struct {
 		Title   string
 		Content template.HTML
 	}{
 		Title:   article.Title(),
-		Content: template.HTML(contentBuf.String()),
+		Content: template.HTML(sanitizedContent),
 	}
 	if err := DefaultTemplate.Execute(w, data); err != nil {
 		// at this point, we can't write a JSON error, so we log it
@@ -336,7 +356,11 @@ func formatHTML(w http.ResponseWriter, article readability.Article, contentBuf *
  */
 func formatMarkdown(w http.ResponseWriter, _ readability.Article, buf *bytes.Buffer) {
 	w.Header().Set("Content-Type", "text/markdown")
-	if err := godown.Convert(w, buf, nil); err != nil {
+
+	sanitizedContent := sanitizeHTML(buf.String())
+	sanitizedBuf := bytes.NewBufferString(sanitizedContent)
+
+	if err := godown.Convert(w, sanitizedBuf, nil); err != nil {
 		log.Printf("error converting to markdown: %v", err)
 	}
 }
@@ -347,9 +371,12 @@ func formatMarkdown(w http.ResponseWriter, _ readability.Article, buf *bytes.Buf
  */
 func formatJSON(w http.ResponseWriter, article readability.Article, buf *bytes.Buffer) {
 	w.Header().Set("Content-Type", "application/json")
+
+	sanitizedContent := sanitizeHTML(buf.String())
+
 	if err := json.NewEncoder(w).Encode(map[string]string{
 		"title":   article.Title(),
-		"content": buf.String(),
+		"content": sanitizedContent,
 	}); err != nil {
 		log.Printf("error encoding json: %v", err)
 	}
@@ -360,7 +387,10 @@ func formatJSON(w http.ResponseWriter, article readability.Article, buf *bytes.B
  */
 func formatText(w http.ResponseWriter, _ readability.Article, buf *bytes.Buffer) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	if _, err := w.Write(buf.Bytes()); err != nil {
+
+	sanitizedContent := sanitizeHTML(buf.String())
+
+	if _, err := w.Write([]byte(sanitizedContent)); err != nil {
 		log.Printf("error writing text response: %v", err)
 	}
 }
