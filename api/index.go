@@ -321,10 +321,10 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 type formatHandler func(w http.ResponseWriter, article readability.Article, buf *bytes.Buffer)
 
 /**
- * sanitizeHTML strips malicious content from an HTML string.
+ * sanitizeHTML strips malicious content from an HTML byte slice.
  */
-func sanitizeHTML(html string) string {
-	return HTMLSanitizer.Sanitize(html)
+func sanitizeHTML(content []byte) []byte {
+	return HTMLSanitizer.SanitizeBytes(content)
 }
 
 /**
@@ -334,7 +334,7 @@ func sanitizeHTML(html string) string {
 func formatHTML(w http.ResponseWriter, article readability.Article, contentBuf *bytes.Buffer) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
-	sanitizedContent := sanitizeHTML(contentBuf.String())
+	sanitizedContent := sanitizeHTML(contentBuf.Bytes())
 
 	// inject safe HTML content
 	data := struct {
@@ -357,8 +357,8 @@ func formatHTML(w http.ResponseWriter, article readability.Article, contentBuf *
 func formatMarkdown(w http.ResponseWriter, _ readability.Article, buf *bytes.Buffer) {
 	w.Header().Set("Content-Type", "text/markdown")
 
-	sanitizedContent := sanitizeHTML(buf.String())
-	sanitizedBuf := bytes.NewBufferString(sanitizedContent)
+	sanitizedContent := sanitizeHTML(buf.Bytes())
+	sanitizedBuf := bytes.NewBuffer(sanitizedContent)
 
 	if err := godown.Convert(w, sanitizedBuf, nil); err != nil {
 		log.Printf("error converting to markdown: %v", err)
@@ -372,11 +372,11 @@ func formatMarkdown(w http.ResponseWriter, _ readability.Article, buf *bytes.Buf
 func formatJSON(w http.ResponseWriter, article readability.Article, buf *bytes.Buffer) {
 	w.Header().Set("Content-Type", "application/json")
 
-	sanitizedContent := sanitizeHTML(buf.String())
+	sanitizedContent := sanitizeHTML(buf.Bytes())
 
 	if err := json.NewEncoder(w).Encode(map[string]string{
 		"title":   article.Title(),
-		"content": sanitizedContent,
+		"content": string(sanitizedContent),
 	}); err != nil {
 		log.Printf("error encoding json: %v", err)
 	}
@@ -388,9 +388,9 @@ func formatJSON(w http.ResponseWriter, article readability.Article, buf *bytes.B
 func formatText(w http.ResponseWriter, _ readability.Article, buf *bytes.Buffer) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 
-	sanitizedContent := sanitizeHTML(buf.String())
+	sanitizedContent := sanitizeHTML(buf.Bytes())
 
-	if _, err := w.Write([]byte(sanitizedContent)); err != nil {
+	if _, err := w.Write(sanitizedContent); err != nil {
 		log.Printf("error writing text response: %v", err)
 	}
 }

@@ -31,9 +31,9 @@ func TestXSSHTMLSanitization(t *testing.T) {
 		t.Fatalf("failed to render html: %v", err)
 	}
 
-	sanitizedHTML := sanitizeHTML(buf.String())
+	sanitizedHTML := sanitizeHTML(buf.Bytes())
 
-	if strings.Contains(sanitizedHTML, "<script>") || strings.Contains(sanitizedHTML, "onerror") {
+	if strings.Contains(string(sanitizedHTML), "<script>") || strings.Contains(string(sanitizedHTML), "onerror") {
 		t.Errorf("HTML was not sanitized correctly: %s", sanitizedHTML)
 	}
 }
