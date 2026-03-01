@@ -13,4 +13,5 @@
 **Learning:** `ip.IsPrivate()` and `ip.IsLoopback()` are not sufficient to block all local traffic. The concept of "Unspecified" addresses (all zeros) must also be explicitly handled when validating IPs for SSRF protection in Go.
 
 **Prevention:** When implementing a safe dialer to prevent SSRF, always include `ip.IsUnspecified()` in the list of blocked IP characteristics, in addition to private, loopback, and link-local addresses.
+
 - 2024-03-01: [XSS via go-readability] go-readability output is not safe for direct rendering and must be sanitized using bluemonday before outputting HTML.
