@@ -326,7 +326,7 @@ func formatHTML(w http.ResponseWriter, article readability.Article, contentBuf *
 	}
 	if err := DefaultTemplate.Execute(w, data); err != nil {
 		// at this point, we can't write a JSON error, so we log it
-		log.Printf("error executing HTML template: %v", err)
+		reportError(err, "error executing HTML template")
 	}
 }
 
@@ -337,7 +337,7 @@ func formatHTML(w http.ResponseWriter, article readability.Article, contentBuf *
 func formatMarkdown(w http.ResponseWriter, _ readability.Article, buf *bytes.Buffer) {
 	w.Header().Set("Content-Type", "text/markdown")
 	if err := godown.Convert(w, buf, nil); err != nil {
-		log.Printf("error converting to markdown: %v", err)
+		reportError(err, "error converting to markdown")
 	}
 }
 
@@ -351,7 +351,7 @@ func formatJSON(w http.ResponseWriter, article readability.Article, buf *bytes.B
 		"title":   article.Title(),
 		"content": buf.String(),
 	}); err != nil {
-		log.Printf("error encoding json: %v", err)
+		reportError(err, "error encoding json")
 	}
 }
 
@@ -361,7 +361,7 @@ func formatJSON(w http.ResponseWriter, article readability.Article, buf *bytes.B
 func formatText(w http.ResponseWriter, _ readability.Article, buf *bytes.Buffer) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	if _, err := w.Write(buf.Bytes()); err != nil {
-		log.Printf("error writing text response: %v", err)
+		reportError(err, "error writing text response")
 	}
 }
 
@@ -496,7 +496,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	link, err := normalizeAndValidateURL(rawLink)
 	if err != nil {
-		log.Printf("error normalizing URL %q: %v", rawLink, err)
+		reportError(err, fmt.Sprintf("error normalizing URL %q", rawLink))
 		writeError(w, http.StatusBadRequest, "Invalid URL provided")
 		return
 	}
@@ -506,7 +506,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	article, err := fetchAndParse(ctx, link, r)
 	if err != nil {
-		log.Printf("error fetching or parsing URL %q: %v", rawLink, err)
+		reportError(err, fmt.Sprintf("error fetching or parsing URL %q", rawLink))
 		writeError(w, http.StatusUnprocessableEntity, "Failed to process URL")
 		return
 	}
@@ -535,6 +535,17 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(map[string]string{"error": msg}); err != nil {
-		log.Printf("error writing error response: %v", err)
+		reportError(err, "error writing error response")
 	}
+}
+
+/**
+ * reportError centralizes error logging and reporting.
+ *
+ * All code paths that handle unexpected errors MUST funnel through this function
+ * to ensure consistent error handling, metadata attachment, and future integration
+ * with error tracking systems (like Sentry).
+ */
+func reportError(err error, contextMsg string) {
+	log.Printf("%s: %v", contextMsg, err)
 }
