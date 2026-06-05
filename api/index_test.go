@@ -9,6 +9,14 @@ import (
 	"testing"
 )
 
+/**
+ * TestNormalizeAndValidateURL ensures raw input strings are correctly sanitized
+ * and structured as valid `url.URL` objects before network calls occur.
+ *
+ * It checks protocol enforcement (rejecting FTP, file, etc.) and proxy artifact
+ * cleanup (e.g. `http:/example.com` to `http://example.com`), ensuring downstream
+ * components receive predictable URL structures.
+ */
 func TestNormalizeAndValidateURL(t *testing.T) {
 	tests := []struct {
 		raw       string
@@ -41,6 +49,15 @@ func TestNormalizeAndValidateURL(t *testing.T) {
 	}
 }
 
+/**
+ * TestFetchAndParse tests the main orchestration pipeline of downloading and extracting
+ * readability from a target website.
+ *
+ * It verifies that HTTP constraints (like max body size and timeouts) are respected
+ * and that the readability library successfully parses semantic structures from the
+ * raw HTML byte stream. It temporarily overrides the package-level `httpClient` to
+ * route traffic to a local `httptest.Server`.
+ */
 func TestFetchAndParse(t *testing.T) {
 	// Serve a minimal HTML page
 	htmlBody := `<html><head><title>Test Title</title></head><body><p>Hello World</p></body></html>`

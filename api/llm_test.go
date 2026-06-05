@@ -31,6 +31,16 @@ func TestIsLLM(t *testing.T) {
 	}
 }
 
+/**
+ * TestGetFormat exercises the content negotiation logic to ensure the correct
+ * response format is selected.
+ *
+ * It validates the strict priority chain:
+ * 1. Explicit query parameter overrides all.
+ * 2. Accept header routing (e.g. `application/json`).
+ * 3. LLM bot detection fallback (User-Agent triggered Markdown).
+ * 4. Default baseline (`html`).
+ */
 func TestGetFormat(t *testing.T) {
 	tests := []struct {
 		urlStr string

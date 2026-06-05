@@ -29,6 +29,15 @@ import (
 	"golang.org/x/net/html"
 )
 
+/**
+ * Application Constants
+ *
+ * These values enforce strict resource boundaries across the request lifecycle
+ * to prevent Denial of Service (DoS) and resource exhaustion.
+ * - Timeouts ensure no request hangs indefinitely.
+ * - maxBodySize prevents Out-Of-Memory (OOM) crashes when fetching large payloads.
+ * - maxRedirects prevents infinite redirect loops during fetch operations.
+ */
 const (
 	maxRedirects      = 5
 	httpClientTimeout = 10 * time.Second
@@ -78,7 +87,14 @@ var (
 	 */
 	ReadabilityParser = readability.NewParser()
 
-	// httpClient used for fetching remote articles with timeouts and redirect policy
+	/**
+	 * httpClient is the shared client for fetching remote articles.
+	 *
+	 * It employs strict boundaries to protect the system:
+	 * - SSRF protection: Uses newSafeDialer to block private/loopback IP resolution.
+	 * - Timeouts: Prevents dangling connections on slow upstreams.
+	 * - Redirect policy: Aborts after maxRedirects to prevent infinite loops.
+	 */
 	httpClient = &http.Client{
 		Transport: &http.Transport{
 			DialContext: newSafeDialer().DialContext,
@@ -356,7 +372,11 @@ func formatJSON(w http.ResponseWriter, article readability.Article, buf *bytes.B
 }
 
 /**
- * formatText returns the plain text content, stripped of HTML tags.
+ * formatText serves the article's raw content as plain text.
+ *
+ * Note: Despite the name, this currently does not strip HTML tags. It outputs the raw
+ * HTML buffer with a text/plain Content-Type, useful for debugging or viewing the raw
+ * structure without browser rendering.
  */
 func formatText(w http.ResponseWriter, _ readability.Article, buf *bytes.Buffer) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
