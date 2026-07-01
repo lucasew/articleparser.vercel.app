@@ -16,6 +16,7 @@ import (
 	"html/template"
 	"io"
 	"log"
+	"log/slog"
 	"math/rand"
 	"net"
 	"net/http"
@@ -542,5 +543,5 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 // reportError is a centralized error-reporting function that logs errors securely,
 // preventing Log Injection (CWE-117) by quoting both context and error string.
 func reportError(err error, context string) {
-	log.Printf("%s: %q", context, err.Error())
+	slog.Error(context, "error", err.Error())
 }
