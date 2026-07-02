@@ -4,3 +4,4 @@
 - 2026-01-26: Separate configuration data (like lists of magic strings) from business logic.
 - 2025-02-18: Remove redundant tests that validate copy-pasted logic instead of the actual function.
 - 2025-02-24: Use %q in logs for untrusted input to prevent log injection.
+- 2026-07-02: Do not ignore errors from url.Parse and http.NewRequest in test setup functions; explicitly capture and check them to avoid hard-to-debug failures.
