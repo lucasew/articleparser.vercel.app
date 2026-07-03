@@ -16,6 +16,7 @@ import (
 	"html/template"
 	"io"
 	"log"
+	"log/slog"
 	"math/rand"
 	"net"
 	"net/http"
@@ -543,6 +544,7 @@ func writeError(w http.ResponseWriter, status int, msg string) {
  * reportError centralizes unexpected error reporting.
  * In a real application, this would send errors to Sentry or another tracking service.
  */
-func reportError(msg string, err error) {
-	log.Printf("%s: %q", msg, err.Error())
+func reportError(msg string, err error, args ...any) {
+	allArgs := append([]any{"error", err}, args...)
+	slog.Error(msg, allArgs...)
 }
