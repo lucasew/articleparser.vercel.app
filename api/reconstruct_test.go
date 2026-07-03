@@ -64,7 +64,10 @@ func TestReconstructTargetURL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			u, _ := url.Parse("http://localhost/api" + tt.query)
+			u, err := url.Parse("http://localhost/api" + tt.query)
+			if err != nil {
+				t.Fatalf("failed to parse url: %v", err)
+			}
 			r := &http.Request{URL: u}
 			got := reconstructTargetURL(r)
 
@@ -72,8 +75,14 @@ func TestReconstructTargetURL(t *testing.T) {
 				return
 			}
 
-			gotU, _ := url.Parse(got)
-			expU, _ := url.Parse(tt.expected)
+			gotU, errGot := url.Parse(got)
+			if errGot != nil {
+				t.Fatalf("failed to parse reconstructed url %q: %v", got, errGot)
+			}
+			expU, errExp := url.Parse(tt.expected)
+			if errExp != nil {
+				t.Fatalf("failed to parse expected url %q: %v", tt.expected, errExp)
+			}
 
 			if gotU == nil || expU == nil {
 				if got != tt.expected {

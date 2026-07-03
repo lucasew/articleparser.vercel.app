@@ -117,7 +117,10 @@ func TestSSRFProtection(t *testing.T) {
 	// Test Unspecified IP (0.0.0.0) bypass attempt
 	// We manually construct a URL with 0.0.0.0 and a port (it doesn't need to be open for the check to fire)
 	unspecifiedURL := "http://0.0.0.0:8080"
-	reqUnspecified, _ := http.NewRequest("GET", unspecifiedURL, nil)
+	reqUnspecified, err := http.NewRequest("GET", unspecifiedURL, nil)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
 	_, err = httpClient.Do(reqUnspecified)
 	if err == nil {
 		t.Fatal("expected an error when dialing 0.0.0.0, but got none")

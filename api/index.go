@@ -245,9 +245,9 @@ func normalizeAndValidateURL(rawLink string) (*url.URL, error) {
 
 	// Fix browser/proxy normalization of :// to :/
 	if strings.HasPrefix(rawLink, "http:/") && !strings.HasPrefix(rawLink, "http://") {
-		rawLink = "http://" + rawLink[6:]
+		rawLink = "http://" + strings.TrimPrefix(rawLink, "http:/")
 	} else if strings.HasPrefix(rawLink, "https:/") && !strings.HasPrefix(rawLink, "https://") {
-		rawLink = "https://" + rawLink[7:]
+		rawLink = "https://" + strings.TrimPrefix(rawLink, "https:/")
 	}
 
 	// add scheme if missing
@@ -326,7 +326,7 @@ func formatHTML(w http.ResponseWriter, article readability.Article, contentBuf *
 	}
 	if err := DefaultTemplate.Execute(w, data); err != nil {
 		// at this point, we can't write a JSON error, so we log it
-		log.Printf("error executing HTML template: %v", err)
+		reportError("error executing HTML template", err)
 	}
 }
 
@@ -337,7 +337,7 @@ func formatHTML(w http.ResponseWriter, article readability.Article, contentBuf *
 func formatMarkdown(w http.ResponseWriter, _ readability.Article, buf *bytes.Buffer) {
 	w.Header().Set("Content-Type", "text/markdown")
 	if err := godown.Convert(w, buf, nil); err != nil {
-		log.Printf("error converting to markdown: %v", err)
+		reportError("error converting to markdown", err)
 	}
 }
 
@@ -351,7 +351,7 @@ func formatJSON(w http.ResponseWriter, article readability.Article, buf *bytes.B
 		"title":   article.Title(),
 		"content": buf.String(),
 	}); err != nil {
-		log.Printf("error encoding json: %v", err)
+		reportError("error encoding json", err)
 	}
 }
 
@@ -361,7 +361,7 @@ func formatJSON(w http.ResponseWriter, article readability.Article, buf *bytes.B
 func formatText(w http.ResponseWriter, _ readability.Article, buf *bytes.Buffer) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	if _, err := w.Write(buf.Bytes()); err != nil {
-		log.Printf("error writing text response: %v", err)
+		reportError("error writing text response", err)
 	}
 }
 
@@ -496,7 +496,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	link, err := normalizeAndValidateURL(rawLink)
 	if err != nil {
-		log.Printf("error normalizing URL %q: %v", rawLink, err)
+		reportError(fmt.Sprintf("error normalizing URL %q", rawLink), err)
 		writeError(w, http.StatusBadRequest, "Invalid URL provided")
 		return
 	}
@@ -506,7 +506,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	article, err := fetchAndParse(ctx, link, r)
 	if err != nil {
-		log.Printf("error fetching or parsing URL %q: %v", rawLink, err)
+		reportError(fmt.Sprintf("error fetching or parsing URL %q", rawLink), err)
 		writeError(w, http.StatusUnprocessableEntity, "Failed to process URL")
 		return
 	}
@@ -535,6 +535,14 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(map[string]string{"error": msg}); err != nil {
-		log.Printf("error writing error response: %v", err)
+		reportError("error writing error response", err)
 	}
+}
+
+/**
+ * reportError centralizes unexpected error reporting.
+ * In a real application, this would send errors to Sentry or another tracking service.
+ */
+func reportError(msg string, err error) {
+	log.Printf("%s: %q", msg, err.Error())
 }
