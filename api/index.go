@@ -245,9 +245,9 @@ func normalizeAndValidateURL(rawLink string) (*url.URL, error) {
 
 	// Fix browser/proxy normalization of :// to :/
 	if strings.HasPrefix(rawLink, "http:/") && !strings.HasPrefix(rawLink, "http://") {
-		rawLink = "http://" + rawLink[6:]
+		rawLink = "http://" + strings.TrimPrefix(rawLink, "http:/")
 	} else if strings.HasPrefix(rawLink, "https:/") && !strings.HasPrefix(rawLink, "https://") {
-		rawLink = "https://" + rawLink[7:]
+		rawLink = "https://" + strings.TrimPrefix(rawLink, "https:/")
 	}
 
 	// add scheme if missing
