@@ -489,9 +489,14 @@ func reconstructTargetURL(r *http.Request) string {
  * 6. Format: Outputs the result in the requested format (HTML, Markdown, JSON, etc.).
  */
 func handler(w http.ResponseWriter, r *http.Request) {
-	rawLink := reconstructTargetURL(r)
-
 	format := getFormat(r)
+	formatter, found := formatters[format]
+	if !found {
+		writeError(w, http.StatusBadRequest, "invalid format")
+		return
+	}
+
+	rawLink := reconstructTargetURL(r)
 	log.Printf("request: %q %q", format, rawLink)
 
 	link, err := normalizeAndValidateURL(rawLink)
@@ -517,11 +522,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	formatter, found := formatters[format]
-	if !found {
-		writeError(w, http.StatusBadRequest, "invalid format")
-		return
-	}
 	formatter(w, article, contentBuf)
 }
 
