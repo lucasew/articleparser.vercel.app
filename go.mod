@@ -1,10 +1,11 @@
 module github.com/lucasew/readability-web
 
-go 1.24.7
+go 1.25.0
 
 require (
 	codeberg.org/readeck/go-readability/v2 v2.1.1
 	github.com/mattn/godown v0.0.1
+	golang.org/x/net v0.55.0
 )
 
 require (
@@ -15,6 +16,5 @@ require (
 	github.com/go-shiori/dom v0.0.0-20230515143342-73569d674e1c // indirect
 	github.com/gogs/chardet v0.0.0-20211120154057-b7413eaefb8f // indirect
 	github.com/mattn/go-runewidth v0.0.19 // indirect
-	golang.org/x/net v0.41.0
-	golang.org/x/text v0.26.0 // indirect
+	golang.org/x/text v0.37.0 // indirect
 )
