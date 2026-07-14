@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -60,7 +59,7 @@ func TestFetchAndParse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to parse server URL: %v", err)
 	}
-	ctx := context.Background()
+	ctx := t.Context()
 	req := httptest.NewRequest("GET", "/", nil)
 	art, err := fetchAndParse(ctx, u, req)
 	if err != nil {
