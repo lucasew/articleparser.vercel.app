@@ -357,10 +357,13 @@ func formatJSON(w http.ResponseWriter, article readability.Article, buf *bytes.B
 
 /**
  * formatText returns the plain text content, stripped of HTML tags.
+ *
+ * Uses Article.RenderText rather than the pre-rendered HTML buffer so
+ * /txt and format=text responses are actual plain text.
  */
-func formatText(w http.ResponseWriter, _ readability.Article, buf *bytes.Buffer) {
+func formatText(w http.ResponseWriter, article readability.Article, _ *bytes.Buffer) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	if _, err := w.Write(buf.Bytes()); err != nil {
+	if err := article.RenderText(w); err != nil {
 		log.Printf("error writing text response: %v", err)
 	}
 }
