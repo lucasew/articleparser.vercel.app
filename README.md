@@ -6,7 +6,7 @@ It's a simple site that you give a URL and it gives you the article content of t
 
 This project is basically a duct tape of the following projects:
 
-- [Go Readability](https://github.com/go-shiori/go-readability): The actual article parser.
+- [Go Readability](https://codeberg.org/readeck/go-readability) (`codeberg.org/readeck/go-readability/v2`): The actual article parser (Readeck fork of go-shiori).
 - [godown](https://github.com/mattn/godown): Converter from HTML to Markdown. Used for Markdown output.
 - Golang Standard library to fetch stuff.
 
@@ -15,6 +15,10 @@ This project is basically a duct tape of the following projects:
 You can use this tool directly in your LLM prompts by prefixing any URL:
 `https://articleparser.vercel.app/https://example.com/article`
 
-It will automatically return **Markdown** when accessed by LLMs or when specified via `/md/` prefix.
+It will automatically return **Markdown** when accessed by LLMs, or you can force a format:
+
+- `/md/https://...` — Markdown
+- `/txt/https://...` — Plain text
+- `/json/https://...` — JSON
 
 To deploy it just link the project to a Vercel project. Everything should magically work.
