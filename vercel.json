@@ -1,6 +1,9 @@
 {
   "rewrites": [
-    { "source": "/api/:format/:url*", "destination": "/api" },
+    {
+      "source": "/api/:format(md|markdown|json|html|text|txt)/:url(https?:/.*)",
+      "destination": "/api?format=:format&url=:url"
+    },
     {
       "source": "/:format(md|markdown|json|html|text|txt)/:url(https?:/.*)",
       "destination": "/api?format=:format&url=:url"
