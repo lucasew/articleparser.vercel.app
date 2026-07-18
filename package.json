@@ -2,6 +2,6 @@
   "name": "article-parser",
   "private": true,
   "devDependencies": {
-    "prettier": "latest"
+    "prettier": "3.8.1"
   }
 }
