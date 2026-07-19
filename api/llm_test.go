@@ -39,6 +39,10 @@ func TestGetFormat(t *testing.T) {
 		want   string
 	}{
 		{"/api?url=...&format=json", "", "", "json"},
+		// Query param is case-insensitive (clients often send format=JSON)
+		{"/api?url=...&format=JSON", "", "", "json"},
+		{"/api?url=...&format=Md", "", "", "md"},
+		{"/api?url=...&format=TEXT", "", "", "text"},
 		{"/api?url=...", "ChatGPT-User/1.0", "", "md"},
 		{"/api?url=...", "Mozilla/5.0", "", "html"},
 		{"/api?url=...", "Mozilla/5.0", "application/json", "json"},
@@ -46,6 +50,7 @@ func TestGetFormat(t *testing.T) {
 		{"/api?url=...", "Mozilla/5.0", "text/plain", "text"},
 		// Query param should override Accept
 		{"/api?url=...&format=txt", "Mozilla/5.0", "application/json", "txt"},
+		{"/api?url=...&format=JSON", "Mozilla/5.0", "text/html", "json"},
 	}
 
 	for _, tt := range tests {
