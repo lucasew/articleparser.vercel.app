@@ -80,6 +80,32 @@ func TestFetchAndParse(t *testing.T) {
 	}
 }
 
+func TestFetchAndParseRejectsOversizedBody(t *testing.T) {
+	// Body larger than maxBodySize must error, not parse a truncated page.
+	oversized := strings.Repeat("x", int(maxBodySize)+1)
+	htmlBody := "<html><head><title>Big</title></head><body><p>" + oversized + "</p></body></html>"
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if _, err := w.Write([]byte(htmlBody)); err != nil {
+			t.Errorf("failed to write response: %v", err)
+		}
+	}))
+	defer srv.Close()
+
+	oldClient := httpClient
+	httpClient = srv.Client()
+	defer func() { httpClient = oldClient }()
+
+	u, err := url.Parse(srv.URL)
+	if err != nil {
+		t.Fatalf("failed to parse server URL: %v", err)
+	}
+	req := httptest.NewRequest("GET", "/", nil)
+	_, err = fetchAndParse(t.Context(), u, req)
+	if err == nil {
+		t.Fatal("fetchAndParse: expected error for oversized body, got nil")
+	}
+}
+
 /**
  * TestSSRFProtection confirms that the custom dialer correctly blocks connections
  * to private and loopback IP addresses.

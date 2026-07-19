@@ -14,7 +14,6 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
-	"io"
 	"log"
 	"math/rand"
 	"net"
@@ -219,8 +218,10 @@ func fetchAndParse(ctx context.Context, link *url.URL, r *http.Request) (readabi
 	}
 	defer res.Body.Close()
 
-	// limit body size to prevent OOM
-	reader := io.LimitReader(res.Body, maxBodySize)
+	// Cap the body so oversized pages error instead of being silently truncated
+	// (io.LimitReader returns EOF at the cap, which can yield partial HTML as a
+	// successful extract). MaxBytesReader surfaces an error when the cap is hit.
+	reader := http.MaxBytesReader(nil, res.Body, maxBodySize)
 	node, err := html.Parse(reader)
 	if err != nil {
 		return readability.Article{}, err
