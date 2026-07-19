@@ -409,8 +409,8 @@ func isLLM(r *http.Request) bool {
  * 4. Default to 'html'.
  */
 func getFormat(r *http.Request) string {
-	// 1. Priority: Query parameter
-	format := r.URL.Query().Get("format")
+	// 1. Priority: Query parameter (normalize case so format=JSON matches "json")
+	format := strings.ToLower(r.URL.Query().Get("format"))
 	if format != "" {
 		return format
 	}
