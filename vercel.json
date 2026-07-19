@@ -5,6 +5,10 @@
       "destination": "/api?format=:format&url=:url"
     },
     {
+      "source": "/api/:url(https?:/.*)",
+      "destination": "/api?url=:url"
+    },
+    {
       "source": "/:format(md|markdown|json|html|text|txt)/:url(https?:/.*)",
       "destination": "/api?format=:format&url=:url"
     },
