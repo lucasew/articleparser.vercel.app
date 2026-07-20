@@ -26,7 +26,7 @@
       and <a href="https://oxal.org/projects/sakura/">sakura.css</a>.
     </p>
 
-    <form action="/api">
+    <form action="/api" method="get">
       <label for="url">URL:</label>
       <input
         type="text"
@@ -35,6 +35,13 @@
         value=""
         placeholder="Enter article URL here..."
       />
+      <label for="format">Format:</label>
+      <select name="format" id="format">
+        <option value="html" selected>HTML</option>
+        <option value="md">Markdown</option>
+        <option value="txt">Plain text</option>
+        <option value="json">JSON</option>
+      </select>
       <button type="submit">Declutter</button>
     </form>
 
