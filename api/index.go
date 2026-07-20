@@ -182,6 +182,7 @@ func getRandomUserAgent() string {
  * - Spoofs User-Agent and other browser headers to avoid blocking.
  * - Forwards Accept-Language from the client to respect language preferences.
  * - Sets security headers (Sec-Fetch-*) to look like a navigation request.
+ * - Rejects non-2xx responses so error/captcha HTML is not parsed as an article.
  * - Limits the response body size to maxBodySize to prevent Out-Of-Memory (OOM) crashes on large pages.
  * - Uses a custom httpClient with SSRF protection.
  */
@@ -217,6 +218,11 @@ func fetchAndParse(ctx context.Context, link *url.URL, r *http.Request) (readabi
 		return readability.Article{}, err
 	}
 	defer res.Body.Close()
+
+	// Reject non-success responses so error/captcha pages are not treated as articles.
+	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusMultipleChoices {
+		return readability.Article{}, fmt.Errorf("unexpected HTTP status %d", res.StatusCode)
+	}
 
 	// Cap the body so oversized pages error instead of being silently truncated
 	// (io.LimitReader returns EOF at the cap, which can yield partial HTML as a
