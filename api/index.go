@@ -9,6 +9,7 @@ package handler
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -19,6 +20,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"syscall"
 	"time"
@@ -197,11 +199,7 @@ func fetchAndParse(ctx context.Context, link *url.URL, r *http.Request) (readabi
 	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8")
 
 	// Fallback headers from client request
-	if lang := r.Header.Get("Accept-Language"); lang != "" {
-		req.Header.Set("Accept-Language", lang)
-	} else {
-		req.Header.Set("Accept-Language", "en-US,en;q=0.9")
-	}
+	req.Header.Set("Accept-Language", cmp.Or(r.Header.Get("Accept-Language"), "en-US,en;q=0.9"))
 
 	req.Header.Set("Cache-Control", "no-cache")
 	req.Header.Set("Pragma", "no-cache")
@@ -392,12 +390,9 @@ var formatters = map[string]formatHandler{
  */
 func isLLM(r *http.Request) bool {
 	ua := strings.ToLower(r.UserAgent())
-	for _, s := range llmUserAgents {
-		if strings.Contains(ua, s) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(llmUserAgents, func(s string) bool {
+		return strings.Contains(ua, s)
+	})
 }
 
 /**
