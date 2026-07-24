@@ -80,6 +80,34 @@ func TestFetchAndParse(t *testing.T) {
 	}
 }
 
+func TestFetchAndParseRejectsNon2xx(t *testing.T) {
+	htmlBody := `<html><head><title>Not Found</title></head><body><p>404 page</p></body></html>`
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		if _, err := w.Write([]byte(htmlBody)); err != nil {
+			t.Errorf("failed to write response: %v", err)
+		}
+	}))
+	defer srv.Close()
+
+	oldClient := httpClient
+	httpClient = srv.Client()
+	defer func() { httpClient = oldClient }()
+
+	u, err := url.Parse(srv.URL)
+	if err != nil {
+		t.Fatalf("failed to parse server URL: %v", err)
+	}
+	req := httptest.NewRequest("GET", "/", nil)
+	_, err = fetchAndParse(t.Context(), u, req)
+	if err == nil {
+		t.Fatal("fetchAndParse: expected error for HTTP 404, got nil")
+	}
+	if !strings.Contains(err.Error(), "unexpected HTTP status 404") {
+		t.Errorf("fetchAndParse error = %v; want unexpected HTTP status 404", err)
+	}
+}
+
 func TestFetchAndParseRejectsOversizedBody(t *testing.T) {
 	// Body larger than maxBodySize must error, not parse a truncated page.
 	oversized := strings.Repeat("x", int(maxBodySize)+1)
