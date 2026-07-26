@@ -43,17 +43,8 @@ func TestNormalizeAndValidateURL(t *testing.T) {
 func TestFetchAndParse(t *testing.T) {
 	// Serve a minimal HTML page
 	htmlBody := `<html><head><title>Test Title</title></head><body><p>Hello World</p></body></html>`
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		if _, err := w.Write([]byte(htmlBody)); err != nil {
-			t.Errorf("failed to write response: %v", err)
-		}
-	}))
-	defer srv.Close()
-
-	// Override httpClient to use server's client
-	oldClient := httpClient
-	httpClient = srv.Client()
-	defer func() { httpClient = oldClient }()
+	srv, cleanup := setupTestServer(t, htmlBody)
+	defer cleanup()
 
 	u, err := url.Parse(srv.URL)
 	if err != nil {
@@ -84,16 +75,8 @@ func TestFetchAndParseRejectsOversizedBody(t *testing.T) {
 	// Body larger than maxBodySize must error, not parse a truncated page.
 	oversized := strings.Repeat("x", int(maxBodySize)+1)
 	htmlBody := "<html><head><title>Big</title></head><body><p>" + oversized + "</p></body></html>"
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		if _, err := w.Write([]byte(htmlBody)); err != nil {
-			t.Errorf("failed to write response: %v", err)
-		}
-	}))
-	defer srv.Close()
-
-	oldClient := httpClient
-	httpClient = srv.Client()
-	defer func() { httpClient = oldClient }()
+	srv, cleanup := setupTestServer(t, htmlBody)
+	defer cleanup()
 
 	u, err := url.Parse(srv.URL)
 	if err != nil {
@@ -103,5 +86,21 @@ func TestFetchAndParseRejectsOversizedBody(t *testing.T) {
 	_, err = fetchAndParse(t.Context(), u, req)
 	if err == nil {
 		t.Fatal("fetchAndParse: expected error for oversized body, got nil")
+	}
+}
+
+func setupTestServer(t *testing.T, htmlBody string) (*httptest.Server, func()) {
+	t.Helper()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if _, err := w.Write([]byte(htmlBody)); err != nil {
+			t.Errorf("failed to write response: %v", err)
+		}
+	}))
+
+	oldClient := httpClient
+	httpClient = srv.Client()
+	return srv, func() {
+		httpClient = oldClient
+		srv.Close()
 	}
 }
