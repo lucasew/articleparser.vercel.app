@@ -6,6 +6,11 @@ import (
 	"syscall"
 )
 
+// ErrPrivateNetwork is returned by the SSRF dial Control when the resolved
+// dial target is private, loopback, CGNAT, or other special-use space.
+// Callers can use errors.Is to detect this refusal without string matching.
+var ErrPrivateNetwork = errors.New("refusing to connect to private network address")
+
 // Special-use IPv4 ranges that Go's net.IP.IsPrivate does not cover, but that
 // must not be reachable via SSRF (CGNAT, benchmarking, documentation).
 var forbiddenIPv4Nets = []net.IPNet{
@@ -73,7 +78,7 @@ func newSafeDialer() *net.Dialer {
 			// ParseIP fail-closed avoids a second DNS lookup that could diverge.
 			ip := net.ParseIP(host)
 			if isForbiddenDialIP(ip) {
-				return errors.New("refusing to connect to private network address")
+				return ErrPrivateNetwork
 			}
 			return nil
 		},
