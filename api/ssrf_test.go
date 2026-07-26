@@ -1,10 +1,10 @@
 package handler
 
 import (
+	"errors"
 	"net"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 )
 
@@ -69,8 +69,8 @@ func TestSSRFBlocksCGNAT(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error dialing CGNAT 100.64.0.1, got nil")
 	}
-	if !strings.Contains(err.Error(), "refusing to connect to private network address") {
-		t.Errorf("error = %v; want refusing to connect to private network address", err)
+	if !errors.Is(err, ErrPrivateNetwork) {
+		t.Errorf("error = %v; want errors.Is(..., ErrPrivateNetwork)", err)
 	}
 }
 
@@ -101,10 +101,9 @@ func TestSSRFProtection(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected an error when dialing a private IP, but got none")
 	}
-	// check if the error is the one we expect from our dialer
-	// the error is wrapped, so we need to check for the substring
-	if !strings.Contains(err.Error(), "refusing to connect to private network address") {
-		t.Errorf("expected error to contain 'refusing to connect to private network address', but got: %v", err)
+	// Control error is wrapped by the dial stack; use errors.Is.
+	if !errors.Is(err, ErrPrivateNetwork) {
+		t.Errorf("expected errors.Is(..., ErrPrivateNetwork), got: %v", err)
 	}
 
 	// Test Unspecified IP (0.0.0.0) bypass attempt
@@ -118,7 +117,7 @@ func TestSSRFProtection(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected an error when dialing 0.0.0.0, but got none")
 	}
-	if !strings.Contains(err.Error(), "refusing to connect to private network address") {
-		t.Errorf("expected error for 0.0.0.0 to contain 'refusing to connect to private network address', but got: %v", err)
+	if !errors.Is(err, ErrPrivateNetwork) {
+		t.Errorf("expected errors.Is(..., ErrPrivateNetwork) for 0.0.0.0, got: %v", err)
 	}
 }
