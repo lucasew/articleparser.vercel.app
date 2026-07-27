@@ -43,7 +43,7 @@ func TestNormalizeAndValidateURL(t *testing.T) {
 func TestFetchAndParse(t *testing.T) {
 	// Serve a minimal HTML page
 	htmlBody := `<html><head><title>Test Title</title></head><body><p>Hello World</p></body></html>`
-	srv, cleanup := setupTestServer(t, htmlBody)
+	srv, cleanup := setupTestServer(t, http.StatusOK, htmlBody)
 	defer cleanup()
 
 	u, err := url.Parse(srv.URL)
@@ -73,17 +73,8 @@ func TestFetchAndParse(t *testing.T) {
 
 func TestFetchAndParseRejectsNon2xx(t *testing.T) {
 	htmlBody := `<html><head><title>Not Found</title></head><body><p>404 page</p></body></html>`
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusNotFound)
-		if _, err := w.Write([]byte(htmlBody)); err != nil {
-			t.Errorf("failed to write response: %v", err)
-		}
-	}))
-	defer srv.Close()
-
-	oldClient := httpClient
-	httpClient = srv.Client()
-	defer func() { httpClient = oldClient }()
+	srv, cleanup := setupTestServer(t, http.StatusNotFound, htmlBody)
+	defer cleanup()
 
 	u, err := url.Parse(srv.URL)
 	if err != nil {
@@ -103,7 +94,7 @@ func TestFetchAndParseRejectsOversizedBody(t *testing.T) {
 	// Body larger than maxBodySize must error, not parse a truncated page.
 	oversized := strings.Repeat("x", int(maxBodySize)+1)
 	htmlBody := "<html><head><title>Big</title></head><body><p>" + oversized + "</p></body></html>"
-	srv, cleanup := setupTestServer(t, htmlBody)
+	srv, cleanup := setupTestServer(t, http.StatusOK, htmlBody)
 	defer cleanup()
 
 	u, err := url.Parse(srv.URL)
@@ -117,9 +108,10 @@ func TestFetchAndParseRejectsOversizedBody(t *testing.T) {
 	}
 }
 
-func setupTestServer(t *testing.T, htmlBody string) (*httptest.Server, func()) {
+func setupTestServer(t *testing.T, status int, htmlBody string) (*httptest.Server, func()) {
 	t.Helper()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(status)
 		if _, err := w.Write([]byte(htmlBody)); err != nil {
 			t.Errorf("failed to write response: %v", err)
 		}
