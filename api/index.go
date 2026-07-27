@@ -207,11 +207,14 @@ func normalizeAndValidateURL(rawLink string) (*url.URL, error) {
 		return nil, errors.New("url parameter is empty")
 	}
 
-	// Fix browser/proxy normalization of :// to :/
-	if strings.HasPrefix(rawLink, "http:/") && !strings.HasPrefix(rawLink, "http://") {
-		rawLink = "http://" + strings.TrimPrefix(rawLink, "http:/")
-	} else if strings.HasPrefix(rawLink, "https:/") && !strings.HasPrefix(rawLink, "https://") {
-		rawLink = "https://" + strings.TrimPrefix(rawLink, "https:/")
+	// Fix browser/proxy normalization of :// to :/ (same shape for http and https).
+	for _, scheme := range []string{"http", "https"} {
+		broken := scheme + ":/"
+		fixed := scheme + "://"
+		if strings.HasPrefix(rawLink, broken) && !strings.HasPrefix(rawLink, fixed) {
+			rawLink = fixed + strings.TrimPrefix(rawLink, broken)
+			break
+		}
 	}
 
 	// add scheme if missing
