@@ -37,6 +37,15 @@ const (
 	handlerTimeout    = 5 * time.Second
 )
 
+// Package-level sentinel errors for URL validation and fetch policy.
+// Callers can use errors.Is without string matching (same pattern as ErrPrivateNetwork).
+var (
+	ErrEmptyURL             = errors.New("url parameter is empty")
+	ErrUnsupportedScheme    = errors.New("unsupported URL scheme")
+	ErrTooManyRedirects     = errors.New("too many redirects")
+	ErrUnexpectedHTTPStatus = errors.New("unexpected HTTP status")
+)
+
 /**
  * Template is the raw HTML template string used for rendering the article.
  *
@@ -85,7 +94,7 @@ var (
 		Timeout: httpClientTimeout,
 		CheckRedirect: func(_ *http.Request, via []*http.Request) error {
 			if len(via) >= maxRedirects {
-				return fmt.Errorf("stopped after %d redirects", maxRedirects)
+				return fmt.Errorf("%w: stopped after %d redirects", ErrTooManyRedirects, maxRedirects)
 			}
 			return nil
 		},
@@ -178,7 +187,7 @@ func fetchAndParse(ctx context.Context, link *url.URL, r *http.Request) (readabi
 
 	// Reject non-success responses so error/captcha pages are not treated as articles.
 	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusMultipleChoices {
-		return readability.Article{}, fmt.Errorf("unexpected HTTP status %d", res.StatusCode)
+		return readability.Article{}, fmt.Errorf("%w %d", ErrUnexpectedHTTPStatus, res.StatusCode)
 	}
 
 	// Cap the body so oversized pages error instead of being silently truncated
@@ -204,7 +213,7 @@ func fetchAndParse(ctx context.Context, link *url.URL, r *http.Request) (readabi
  */
 func normalizeAndValidateURL(rawLink string) (*url.URL, error) {
 	if rawLink == "" {
-		return nil, errors.New("url parameter is empty")
+		return nil, ErrEmptyURL
 	}
 
 	// Fix browser/proxy normalization of :// to :/ (same shape for http and https).
@@ -228,7 +237,7 @@ func normalizeAndValidateURL(rawLink string) (*url.URL, error) {
 	}
 	// only allow http(s)
 	if link.Scheme != "http" && link.Scheme != "https" {
-		return nil, errors.New("unsupported URL scheme")
+		return nil, ErrUnsupportedScheme
 	}
 	return link, nil
 }
