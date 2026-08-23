@@ -58,20 +58,25 @@ func TestIsForbiddenDialIP(t *testing.T) {
 	}
 }
 
-func TestSSRFBlocksCGNAT(t *testing.T) {
-	// 100.64.0.0/10 is not IsPrivate in Go; the dialer must still refuse it.
-	// No listener needed: Control rejects before connect.
-	req, err := http.NewRequest("GET", "http://100.64.0.1:80/", nil)
+func assertPrivateNetworkRefused(t *testing.T, rawURL string) {
+	t.Helper()
+	req, err := http.NewRequest("GET", rawURL, nil)
 	if err != nil {
-		t.Fatalf("NewRequest: %v", err)
+		t.Fatalf("NewRequest(%q): %v", rawURL, err)
 	}
 	_, err = httpClient.Do(req)
 	if err == nil {
-		t.Fatal("expected error dialing CGNAT 100.64.0.1, got nil")
+		t.Fatalf("expected error dialing %s, got nil", rawURL)
 	}
 	if !errors.Is(err, ErrPrivateNetwork) {
-		t.Errorf("error = %v; want errors.Is(..., ErrPrivateNetwork)", err)
+		t.Errorf("dial %s: error = %v; want errors.Is(..., ErrPrivateNetwork)", rawURL, err)
 	}
+}
+
+func TestSSRFBlocksCGNAT(t *testing.T) {
+	// 100.64.0.0/10 is not IsPrivate in Go; the dialer must still refuse it.
+	// No listener needed: Control rejects before connect.
+	assertPrivateNetworkRefused(t, "http://100.64.0.1:80/")
 }
 
 /**
@@ -88,36 +93,8 @@ func TestSSRFProtection(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	// get loopback address of the server
-	// srv.URL will be something like http://127.0.0.1:54321
-	// we want to test if the dialer blocks the connection to 127.0.0.1
-	// so, we don't use the server's client, we use our own httpClient
-	req, err := http.NewRequest("GET", srv.URL, nil)
-	if err != nil {
-		t.Fatalf("failed to create request: %v", err)
-	}
-
-	_, err = httpClient.Do(req)
-	if err == nil {
-		t.Fatal("expected an error when dialing a private IP, but got none")
-	}
-	// Control error is wrapped by the dial stack; use errors.Is.
-	if !errors.Is(err, ErrPrivateNetwork) {
-		t.Errorf("expected errors.Is(..., ErrPrivateNetwork), got: %v", err)
-	}
-
-	// Test Unspecified IP (0.0.0.0) bypass attempt
-	// We manually construct a URL with 0.0.0.0 and a port (it doesn't need to be open for the check to fire)
-	unspecifiedURL := "http://0.0.0.0:8080"
-	reqUnspecified, err := http.NewRequest("GET", unspecifiedURL, nil)
-	if err != nil {
-		t.Fatalf("failed to create request for unspecified IP: %v", err)
-	}
-	_, err = httpClient.Do(reqUnspecified)
-	if err == nil {
-		t.Fatal("expected an error when dialing 0.0.0.0, but got none")
-	}
-	if !errors.Is(err, ErrPrivateNetwork) {
-		t.Errorf("expected errors.Is(..., ErrPrivateNetwork) for 0.0.0.0, got: %v", err)
-	}
+	// srv.URL is a loopback listener; the dialer must refuse before connect.
+	assertPrivateNetworkRefused(t, srv.URL)
+	// Unspecified 0.0.0.0 can resolve to localhost; Control must still refuse.
+	assertPrivateNetworkRefused(t, "http://0.0.0.0:8080")
 }
