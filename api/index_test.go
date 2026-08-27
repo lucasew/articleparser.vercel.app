@@ -43,13 +43,9 @@ func TestNormalizeAndValidateURL(t *testing.T) {
 func TestFetchAndParse(t *testing.T) {
 	// Serve a minimal HTML page
 	htmlBody := `<html><head><title>Test Title</title></head><body><p>Hello World</p></body></html>`
-	srv, cleanup := setupTestServer(t, http.StatusOK, htmlBody)
+	_, u, cleanup := setupTestServer(t, http.StatusOK, htmlBody)
 	defer cleanup()
 
-	u, err := url.Parse(srv.URL)
-	if err != nil {
-		t.Fatalf("failed to parse server URL: %v", err)
-	}
 	ctx := t.Context()
 	req := httptest.NewRequest("GET", "/", nil)
 	art, err := fetchAndParse(ctx, u, req)
@@ -73,15 +69,11 @@ func TestFetchAndParse(t *testing.T) {
 
 func TestFetchAndParseRejectsNon2xx(t *testing.T) {
 	htmlBody := `<html><head><title>Not Found</title></head><body><p>404 page</p></body></html>`
-	srv, cleanup := setupTestServer(t, http.StatusNotFound, htmlBody)
+	_, u, cleanup := setupTestServer(t, http.StatusNotFound, htmlBody)
 	defer cleanup()
 
-	u, err := url.Parse(srv.URL)
-	if err != nil {
-		t.Fatalf("failed to parse server URL: %v", err)
-	}
 	req := httptest.NewRequest("GET", "/", nil)
-	_, err = fetchAndParse(t.Context(), u, req)
+	_, err := fetchAndParse(t.Context(), u, req)
 	if err == nil {
 		t.Fatal("fetchAndParse: expected error for HTTP 404, got nil")
 	}
@@ -94,21 +86,17 @@ func TestFetchAndParseRejectsOversizedBody(t *testing.T) {
 	// Body larger than maxBodySize must error, not parse a truncated page.
 	oversized := strings.Repeat("x", int(maxBodySize)+1)
 	htmlBody := "<html><head><title>Big</title></head><body><p>" + oversized + "</p></body></html>"
-	srv, cleanup := setupTestServer(t, http.StatusOK, htmlBody)
+	_, u, cleanup := setupTestServer(t, http.StatusOK, htmlBody)
 	defer cleanup()
 
-	u, err := url.Parse(srv.URL)
-	if err != nil {
-		t.Fatalf("failed to parse server URL: %v", err)
-	}
 	req := httptest.NewRequest("GET", "/", nil)
-	_, err = fetchAndParse(t.Context(), u, req)
+	_, err := fetchAndParse(t.Context(), u, req)
 	if err == nil {
 		t.Fatal("fetchAndParse: expected error for oversized body, got nil")
 	}
 }
 
-func setupTestServer(t *testing.T, status int, htmlBody string) (*httptest.Server, func()) {
+func setupTestServer(t *testing.T, status int, htmlBody string) (*httptest.Server, *url.URL, func()) {
 	t.Helper()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(status)
@@ -117,9 +105,14 @@ func setupTestServer(t *testing.T, status int, htmlBody string) (*httptest.Serve
 		}
 	}))
 
+	u, err := url.Parse(srv.URL)
+	if err != nil {
+		t.Fatalf("failed to parse server URL: %v", err)
+	}
+
 	oldClient := httpClient
 	httpClient = srv.Client()
-	return srv, func() {
+	return srv, u, func() {
 		httpClient = oldClient
 		srv.Close()
 	}
