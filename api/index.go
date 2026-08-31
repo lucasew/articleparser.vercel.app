@@ -322,13 +322,10 @@ func formatMarkdown(w http.ResponseWriter, _ readability.Article, buf *bytes.Buf
  * Useful for programmatic consumption where the client wants to handle rendering.
  */
 func formatJSON(w http.ResponseWriter, article readability.Article, buf *bytes.Buffer) {
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(map[string]string{
+	writeJSON(w, http.StatusOK, map[string]string{
 		"title":   article.Title(),
 		"content": buf.String(),
-	}); err != nil {
-		log.Printf("error encoding json: %v", err)
-	}
+	})
 }
 
 /**
@@ -508,9 +505,16 @@ func handler(w http.ResponseWriter, r *http.Request) {
  * and sets the correct HTTP status code and Content-Type header.
  */
 func writeError(w http.ResponseWriter, status int, msg string) {
+	writeJSON(w, status, map[string]string{"error": msg})
+}
+
+// writeJSON sets application/json, writes status when it is not 200, and encodes payload.
+func writeJSON(w http.ResponseWriter, status int, payload map[string]string) {
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(map[string]string{"error": msg}); err != nil {
-		log.Printf("error writing error response: %v", err)
+	if status != http.StatusOK {
+		w.WriteHeader(status)
+	}
+	if err := json.NewEncoder(w).Encode(payload); err != nil {
+		log.Printf("error encoding json: %v", err)
 	}
 }
