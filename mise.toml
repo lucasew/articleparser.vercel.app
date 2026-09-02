@@ -1,0 +1,55 @@
+[tools]
+bun = "1.3.14"
+go = "1.25.12"
+golangci-lint = "2.12.2"
+
+[tasks.dev]
+run = "bunx vercel dev"
+
+[tasks.install]
+depends = ["install:*"]
+description = "Install dependencies"
+
+[tasks."install:go"]
+run = "go mod download"
+description = "Install Go dependencies"
+
+[tasks."install:bun"]
+run = "bun install"
+description = "Install Bun dependencies"
+
+[tasks.test]
+run = "go test ./..."
+description = "Run tests"
+
+[tasks.lint]
+depends = ["lint:*"]
+description = "Run all linters"
+
+[tasks."lint:go"]
+run = "golangci-lint run"
+description = "Run Go linter"
+
+[tasks."lint:prettier"]
+run = "bunx prettier --check ."
+description = "Lint with Prettier"
+
+[tasks.fmt]
+depends = ["fmt:*"]
+description = "Format all files"
+
+[tasks."fmt:go"]
+run = "golangci-lint run --fix"
+description = "Format Go files"
+
+[tasks."fmt:prettier"]
+run = "bunx prettier --write ."
+description = "Format with Prettier"
+
+[tasks.codegen]
+run = "echo 'No codegen tasks'"
+description = "Run code generation"
+
+[tasks.ci]
+depends = ["lint", "test"]
+description = "Run CI pipeline"

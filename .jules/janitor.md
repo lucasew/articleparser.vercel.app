@@ -1,0 +1,6 @@
+- 2024-08-01: When refactoring, ensure all old code is removed and all calls to new functions are updated.
+- 2024-08-02: Regularly scan for and remove dead code, and ensure formatters render expected content.
+- 2026-01-20: Extract complex, self-contained logic blocks from main handlers into helper functions.
+- 2026-01-26: Separate configuration data (like lists of magic strings) from business logic.
+- 2025-02-18: Remove redundant tests that validate copy-pasted logic instead of the actual function.
+- 2025-02-24: Use %q in logs for untrusted input to prevent log injection.

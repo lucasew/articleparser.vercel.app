@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Article Parser</title>
+    <link
+      id="theme"
+      rel="stylesheet"
+      href="https://unpkg.com/sakura.css/css/sakura.css"
+    />
+    <script
+      defer
+      src="https://analytics.app.lew.tec.br/script.js"
+      data-website-id="1478aa23-e958-4991-87d7-0f58309d28ba"
+    ></script>
+  </head>
+  <body>
+    <script src="https://bookmarklet-theme.vercel.app/script.js"></script>
+
+    <h1>Article Parser</h1>
+    <p>
+      Article Parser is a tool to declutter articles. Made by
+      <a href="https://github.com/lucasew/">lucasew</a> using
+      <a href="https://codeberg.org/readeck/go-readability">go-readability</a>
+      and <a href="https://oxal.org/projects/sakura/">sakura.css</a>.
+    </p>
+
+    <form action="/api" method="get">
+      <label for="url">URL:</label>
+      <input
+        type="text"
+        name="url"
+        id="url"
+        value=""
+        placeholder="Enter article URL here..."
+      />
+      <label for="format">Format:</label>
+      <select name="format" id="format">
+        <option value="html" selected>HTML</option>
+        <option value="md">Markdown</option>
+        <option value="txt">Plain text</option>
+        <option value="json">JSON</option>
+      </select>
+      <button type="submit">Declutter</button>
+    </form>
+
+    <hr />
+    <h3>LLM Friendly</h3>
+    <p>
+      You can use this tool directly in your LLM prompts by prefixing any URL:
+    </p>
+    <pre><code>https://articleparser.vercel.app/https://example.com/article</code></pre>
+    <p>
+      It will automatically return <strong>Markdown</strong> when accessed by
+      LLMs or when specified:
+    </p>
+    <ul>
+      <li><code>/md/https://...</code> - Markdown</li>
+      <li><code>/txt/https://...</code> - Plain Text</li>
+      <li><code>/json/https://...</code> - JSON</li>
+    </ul>
+
+    <p>
+      Or use the
+      <a
+        href="javascript:(function(){window.open('https://articleparser.vercel.app/api?url='+encodeURIComponent(window.location.href),'_blank')})();"
+        >bookmarklet</a
+      >.
+    </p>
+  </body>
+</html>

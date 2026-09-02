@@ -1,0 +1,13 @@
+{
+  "dependencies": [
+    {
+      "kind": "tool",
+      "ref": "registry:biome",
+      "depName": "biomejs/biome",
+      "currentValue": "2.5.11",
+      "datasource": "github-releases",
+      "versioning": "semver",
+      "extractVersion": "^@biomejs/biome@(?\u003cversion\u003e\\d+\\.\\d+\\.\\d+)$"
+    }
+  ]
+}
