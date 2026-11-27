@@ -3,7 +3,7 @@ module github.com/lucasew/readability-web
 go 1.25.0
 
 require (
-	codeberg.org/readeck/go-readability/v2 v2.1.2
+	codeberg.org/readeck/go-readability/v2 v2.1.3
 	github.com/mattn/godown v0.0.1
 	golang.org/x/net v0.55.0
 )
